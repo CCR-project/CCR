@@ -42,7 +42,7 @@ Section A.
 
   Definition setF: list val -> itree Es val :=
     fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;;
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
       f <- pget;;
       _ <- pput (fun n => if Z.eq_dec n k then v else f n);;;
       Ret Vundef
@@ -50,7 +50,7 @@ Section A.
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
-      k <- (pargs [Tint] varg)?;;;
+      k <- (pargs [Tint] varg)?;;
       f <- pget;;;
       Ret (Vint (f k))
   .
@@ -58,8 +58,8 @@ Section A.
   Definition set_by_userF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;;
-      ccallU "set" [Vint v]
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      ccallU "set" [Vint k; Vint v]
   .
 
   Definition MapSbtb: list (string * fspecbody) :=
@@ -71,7 +71,7 @@ Section A.
   Definition SMapSem: SModSem.t := {|
     SModSem.fnsems := MapSbtb;
     SModSem.mn := "Map";
-    SModSem.initial_mr := GRA.embed (Excl.unit, Auth.excl ((fun _ => Excl.just 0%Z): @URA.car (nat ==> (Excl.t Z))%ra) ((fun _ => Excl.just 0%Z): @URA.car (nat ==> (Excl.t Z))%ra));
+    SModSem.initial_mr := GRA.embed (Excl.unit, Auth.excl ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra) ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra));
     SModSem.initial_st := (fun (_: Z) => 0%Z)↑;
   |}
   .

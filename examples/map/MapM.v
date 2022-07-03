@@ -64,8 +64,8 @@ Section M.
   Definition set_by_userF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;;
-      ccallU "set" [Vint v]
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      ccallU "set" [Vint k; Vint v]
   .
 
   Definition MapSbtbM: list (string * fspecbody) :=

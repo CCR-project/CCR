@@ -57,7 +57,7 @@ Section I0.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
-      ccallU "set" [Vint v]
+      ccallU "set" [Vint k; Vint v]
   .
 
   Definition MapSem: ModSem.t := {|

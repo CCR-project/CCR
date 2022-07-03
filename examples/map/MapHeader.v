@@ -18,17 +18,17 @@ Set Implicit Arguments.
 
 
 Instance MapRA0: URA.t := Excl.t unit.
-Instance MapRA1: URA.t := URA.prod (Excl.t unit) (Auth.t (nat ==> (Excl.t Z)))%ra.
+Instance MapRA1: URA.t := URA.prod (Excl.t unit) (Auth.t (Z ==> (Excl.t Z)))%ra.
 
-Definition map_points_to `{@GRA.inG MapRA1 Σ} (k: nat) (v: Z): iProp :=
-  OwnM (Excl.unit, Auth.white ((fun n => if Nat.eq_dec n k then Excl.just v else Excl.unit): @URA.car (nat ==> (Excl.t Z))%ra)).
+Definition map_points_to `{@GRA.inG MapRA1 Σ} (k: Z) (v: Z): iProp :=
+  OwnM (Excl.unit, Auth.white ((fun n => if Z.eq_dec n k then Excl.just v else Excl.unit): @URA.car (Z ==> (Excl.t Z))%ra)).
 
 
 Definition pending0 `{@GRA.inG MapRA0 Σ}: iProp :=
   OwnM (Excl.just tt).
 
 Definition pending1 `{@GRA.inG MapRA1 Σ}: iProp :=
-  OwnM (Excl.just tt, URA.unit: @URA.car (Auth.t (nat ==> (Excl.t Z)))%ra).
+  OwnM (Excl.just tt, URA.unit: @URA.car (Auth.t (Z ==> (Excl.t Z)))%ra).
 
 Definition pending `{@GRA.inG MapRA0 Σ} `{@GRA.inG MapRA1 Σ}: iProp :=
   pending0 ** pending1.
@@ -63,7 +63,7 @@ Section SPECS.
     mk_fspec_inv
       (mk_simple (fun '(k, v) =>
                     (ord_top,
-                      (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
+                      (fun varg => (⌜varg = ([Vint k])↑⌝)
                                      ** (map_points_to k v)),
                       (fun vret => ⌜vret = (Vint v)↑⌝ ** map_points_to k v)))).
 
@@ -73,7 +73,7 @@ Section SPECS.
     mk_fspec_inv
       (mk_simple (fun '(k, w, v) =>
                     (ord_top,
-                      (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
+                      (fun varg => (⌜varg = ([Vint k; Vint v])↑⌝)
                                      ** (map_points_to k w)),
                       (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v)))).
 
@@ -83,7 +83,7 @@ Section SPECS.
     mk_fspec_inv
       (mk_simple (fun '(k, w) =>
                     (ord_top,
-                      (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
+                      (fun varg => (⌜varg = ([Vint k])↑⌝)
                                      ** (map_points_to k w)),
                       (fun vret => ⌜vret = Vundef↑⌝ ** ∃ v, map_points_to k v)))).
 

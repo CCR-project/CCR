@@ -219,7 +219,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold MapI0.set_by_userF, MapM.set_by_userF, ccallU.
-      init. iarg. mDesAll. subst. steps. astop. steps.
+      init. iarg. mDesAll. subst. steps.
       rewrite STB_setM. steps.
       icall_weaken set_specM _ _ with "*".
       { refl. }
