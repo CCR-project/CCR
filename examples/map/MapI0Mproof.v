@@ -137,6 +137,41 @@ Section SIMMODSEM.
     { destruct k; ss. }
   Qed.
 
+  Lemma repeat_nth A (a: A) n k
+        (RANGE: k < n)
+    :
+    nth_error (List.repeat a n) k = Some a.
+  Proof.
+    revert k RANGE. induction n; ss; i.
+    { lia. }
+    { destruct k; ss. rewrite IHn; eauto. lia. }
+  Qed.
+
+  Lemma set_nth_length A k (a: A) l l'
+        (SET: set_nth k l a = Some l')
+    :
+    length l' = length l.
+  Proof.
+    revert l l' SET. induction k; ss; i.
+    { destruct l; ss. clarify. }
+    { destruct l; ss. unfold option_map in *. des_ifs.
+      ss. f_equal. eauto.
+    }
+  Qed.
+
+  Lemma set_nth_error A k (a: A) l l' k'
+        (SET: set_nth k l a = Some l')
+    :
+    nth_error l' k' = if Nat.eq_dec k' k then Some a else nth_error l k'.
+  Proof.
+    revert a l l' k' SET. induction k; ss; i.
+    { destruct l; ss. clarify. des_ifs. destruct k'; ss. }
+    { destruct l; ss. unfold option_map in *. des_ifs; ss.
+      { erewrite IHk; eauto. des_ifs. }
+      { destruct k'; ss. erewrite IHk; eauto. des_ifs. }
+    }
+  Qed.
+
   Theorem correct: refines2 [MapI0.Map] [MapM.Map GlobalStbM].
   Proof.
     eapply adequacy_local2. econs; ss. i. rr.
@@ -160,7 +195,7 @@ Section SIMMODSEM.
       { iLeft. iSplits. iSplitR "A"; eauto. iSplit; eauto.
         { iPureIntro. esplits; eauto.
           { instantiate (1:=List.repeat 0%Z (Z.to_nat x)). eapply repeat_length. }
-          { i. admit "ez - list". }
+          { i. rewrite repeat_nth; auto. lia. }
         }
         admit "malloc -> calloc".
       }
@@ -171,28 +206,28 @@ Section SIMMODSEM.
       mDesOr "INV".
       2:{ mDesAll. subst. steps. exfalso. lia. }
       mDesAll. des. steps. unfold scale_int. des_ifs.
-      2:{ admit "add int allignment condition". }
+      2:{ exfalso. eapply n. eapply Z.divide_factor_r. }
       steps. astart 1. acatch.
       { eapply STBINCLM. stb_tac. ss. }
       mApply points_to_get_split "A1".
       2:{ eapply map_nth_error. eauto. }
       mDesAll.
+      replace ((a0 + (z * 8) `div` 8)%Z) with ((a0 + Z.to_nat z)%Z); auto.
+      2:{ rewrite Z_div_mult; ss. lia. }
       icall_open _ with "A1".
-      { iModIntro. instantiate (1:=Some (_, _, _)). ss.
-        iSplit; eauto. instantiate (1:=Vint (a2 z)). admit "alignment".
-      }
+      { iModIntro. instantiate (1:=Some (_, _, _)). ss. iSplit; eauto. }
       { ss. }
       ss. mDesAll. subst. steps. astop. steps.
       iret _; ss. iModIntro. iSplit; ss.
       iLeft. iExists _. iExists _, _, _, _. iSplitR "A"; eauto.
-      iSplit; eauto. iApply "A2". admit "alignment".
+      iSplit; eauto. iApply "A2". auto.
     }
     econs; ss.
     { unfold MapI0.setF, MapM.setF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
       2:{ mDesAll. subst. steps. exfalso. lia. }
       mDesAll. des. steps. unfold scale_int. des_ifs.
-      2:{ admit "add int allignment condition". }
+      2:{ exfalso. eapply n. eapply Z.divide_factor_r. }
       steps. astart 1. acatch.
       { eapply STBINCLM. stb_tac. ss. }
       hexploit set_nth_success.
@@ -201,20 +236,19 @@ Section SIMMODSEM.
       mApply points_to_set_split "A1".
       2:{ rewrite set_nth_map. rewrite H1. ss. }
       mDesAll.
+      replace ((a0 + (z * 8) `div` 8)%Z) with ((a0 + Z.to_nat z)%Z); auto.
+      2:{ rewrite Z_div_mult; ss. lia. }
       icall_open _ with "A1".
-      { iModIntro. instantiate (1:=Some (_, _, _)). ss.
-        iExists _. iSplit; eauto.
-        instantiate (1:=a4). admit "alignment".
-      }
+      { iModIntro. instantiate (1:=Some (_, _, _)). ss. iExists _. iSplit; eauto. }
       { ss. }
       ss. mDesAll. subst. steps. astop. steps.
       iret _; ss. iModIntro. iSplit; ss.
       iLeft. iExists _. iExists _, _, _, _. iSplitR "A"; eauto.
       iSplit; eauto.
-      2:{ iApply "A2". admit "alignment". }
+      2:{ iApply "A2". eauto. }
       { iPureIntro. esplits; eauto.
-        { admit "ez - list". }
-        { admit "ez - list". }
+        { erewrite set_nth_length; eauto. }
+        { i. ss. erewrite set_nth_error; eauto. des_ifs; eauto. exfalso. lia. }
       }
     }
     econs; ss.

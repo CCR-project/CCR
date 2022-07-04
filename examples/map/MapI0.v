@@ -40,7 +40,7 @@ Section I0.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
+      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint (k * 8)))?;;
       `r: val <- ccallU "load" [vptr];; r <- (unint r)?;;
       Ret (Vint r)
   .
@@ -48,7 +48,7 @@ Section I0.
   Definition setF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tint] varg)?;;
-      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
+      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint (k * 8)))?;;
       `_: val <- ccallU "store" [vptr; Vint v];;
       Ret Vundef
   .
