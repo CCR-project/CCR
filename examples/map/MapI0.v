@@ -33,7 +33,15 @@ Section I0.
     fun varg =>
       `sz: Z <- (pargs [Tint] varg)?;;
       `r: val <- ccallU "alloc" [Vint sz];;
-      pput r;;;
+      pput r;;; r <- (unint r)?;;
+      _ <- ITree.iter
+             (fun i =>
+                if (Z_lt_le_dec i sz)
+                then
+                  `r: val <- ccallU "store" [Vint (r + i * 8)%Z; Vint 0];;
+                      Ret (inl (i - 1)%Z)
+                else
+                  Ret (inr tt)) 0%Z;;
       Ret Vundef
   .
 
