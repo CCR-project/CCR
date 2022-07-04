@@ -48,6 +48,7 @@ Section SPECS.
       (mk_simple (fun (sz: nat) =>
                     (ord_top,
                       (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                     ** (⌜(8 * (Z.of_nat sz) < modulus_64%Z)%Z⌝)
                                      ** pending0),
                       (fun vret => True%I)))).
 
@@ -56,6 +57,7 @@ Section SPECS.
       (mk_simple (fun (sz: nat) =>
                     (ord_top,
                       (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                     ** (⌜(8 * (Z.of_nat sz) < modulus_64%Z)%Z⌝)
                                      ** pending),
                       (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz)))).
 

@@ -185,9 +185,7 @@ Section SIMMODSEM.
       mDesAll. subst. steps. astart 100. acatch.
       { eapply STBINCLM. stb_tac. ss. }
       icall_open _ with "".
-      { iModIntro. instantiate (1:=Some _). ss. iPureIntro.
-        splits; ss. admit "add range condition".
-      }
+      { iModIntro. instantiate (1:=Some _). ss. }
       { ss. }
       ss. mDesAll. subst. steps. astop. steps.
       iret _; ss.
