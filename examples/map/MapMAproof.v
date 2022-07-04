@@ -34,47 +34,111 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
+  Definition initial_map_r: @URA.car MapRA1 :=
+    (Excl.unit, Auth.excl ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra) ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra)).
+
+  Definition black_map_r (f: Z -> Z): @URA.car MapRA1 :=
+    (Excl.unit, Auth.black ((fun k => Excl.just (f k)): @URA.car (Z ==> (Excl.t Z))%ra)).
+
+  Definition unallocated_r (sz: Z): @URA.car MapRA1 :=
+    (Excl.unit, Auth.white ((fun k =>
+                               if (Z_gt_le_dec 0 k) then Excl.just 0%Z
+                               else if (Z_gt_le_dec sz k) then Excl.unit else Excl.just 0%Z)
+                             : @URA.car (Z ==> (Excl.t Z))%ra)).
+
   Definition initial_map: iProp :=
-    OwnM (Excl.unit, Auth.excl ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra) ((fun _ => Excl.just 0%Z): @URA.car (Z ==> (Excl.t Z))%ra)).
+    OwnM initial_map_r.
 
   Definition black_map (f: Z -> Z): iProp :=
-    OwnM (Excl.unit, Auth.black ((fun k => Excl.just (f k)): @URA.car (Z ==> (Excl.t Z))%ra)).
+    OwnM (black_map_r f).
 
   Definition unallocated (sz: Z): iProp :=
-    OwnM (Excl.unit, Auth.white ((fun k =>
-                                    if (Z_gt_le_dec 0 k) then Excl.just 0%Z
-                                    else if (Z_gt_le_dec sz k) then Excl.unit else Excl.just 0%Z)
-                                  : @URA.car (Z ==> (Excl.t Z))%ra)).
+    OwnM (unallocated_r sz).
+
+  Lemma unallocated_alloc (sz: nat)
+    :
+    unallocated sz -∗ (map_points_to sz 0 ** unallocated (Z.pos (Pos.of_succ_nat sz))).
+  Proof.
+    unfold map_points_to, unallocated. iIntros "H".
+    replace (unallocated_r sz) with ((map_points_to_r sz 0) ⋅ (unallocated_r (S sz))).
+    { ss. iDestruct "H" as "[H0 H1]". iFrame. }
+    unfold unallocated_r, map_points_to_r. ur. f_equal.
+    { ur. auto. }
+    { ur. unfold Auth.white. f_equal. ur. extensionality k.
+      ur. des_ifs; try by (exfalso; lia).
+    }
+  Qed.
 
   Lemma initial_map_initialize sz
     :
-    initial_map -∗ #=> (black_map (fun _ => 0%Z) ** initial_points_tos sz ** unallocated sz).
+    initial_map -∗ (black_map (fun _ => 0%Z) ** initial_points_tos sz ** unallocated sz).
   Proof.
-  Admitted.
+    induction sz.
+    { ss. iIntros "H". unfold initial_map.
+      replace initial_map_r with ((black_map_r (fun _ => 0%Z)) ⋅ (unallocated_r 0)).
+      { iDestruct "H" as "[H0 H1]". iFrame. }
+      { unfold initial_map_r, black_map_r, unallocated_r. ur. f_equal.
+        { ur. auto. }
+        { ur. f_equal. ur. extensionality k. ur. des_ifs. }
+      }
+    }
+    { iIntros "H". iPoseProof (IHsz with "H") as "H". ss.
+      iDes. iPoseProof (unallocated_alloc with "A") as "A". iFrame. auto.
+    }
+  Qed.
 
   Lemma initial_map_no_points_to k v
     :
     initial_map -∗ map_points_to k v -∗ ⌜False⌝.
   Proof.
-  Admitted.
+    unfold initial_map, map_points_to.
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H". exfalso. rr in H2. ur in H2. unseal "ra". des.
+    rr in H3. ur in H3. unseal "ra". des.
+    rr in H3. des. ur in H3. eapply equal_f with (x:=k) in H3.
+    ur in H3. des_ifs.
+  Qed.
 
   Lemma unallocated_range sz k v
     :
     unallocated sz -∗ map_points_to k v -∗ ⌜(0 <= k < sz)%Z⌝.
   Proof.
-  Admitted.
+    unfold unallocated, map_points_to.
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H". iPureIntro. rr in H2. ur in H2. unseal "ra". des.
+    rr in H3. ur in H3. unseal "ra".
+    rr in H3. ur in H3. unseal "ra". specialize (H3 k).
+    rr in H3. ur in H3. unseal "ra". des_ifs. lia.
+  Qed.
 
   Lemma black_map_get f k v
     :
     black_map f -∗ map_points_to k v -∗ (⌜f k = v⌝).
   Proof.
-  Admitted.
+    unfold black_map, map_points_to.
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H". iPureIntro. rr in H2. ur in H2. unseal "ra". des.
+    rr in H3. ur in H3. unseal "ra". des.
+    rr in H3. des. ur in H3. eapply equal_f with (x:=k) in H3.
+    ur in H3. des_ifs.
+  Qed.
 
   Lemma black_map_set f k w v
     :
     black_map f -∗ map_points_to k w -∗ #=> (black_map (fun n => if Z.eq_dec n k then v else f n) ** map_points_to k v).
   Proof.
-  Admitted.
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iPoseProof (OwnM_Upd with "H") as "H".
+    { instantiate (1:=black_map_r (fun n => if Z.eq_dec n k then v else f n) ⋅ map_points_to_r k v).
+      rr. i. ur in H2. ur. unseal "ra". des_ifs. des. split; auto.
+      ur in H3. ur. des_ifs. des. rr in H3. des. split.
+      { rr. exists ctx. ur in H3. ur. extensionality n.
+        eapply equal_f with (x:=n) in H3. ur in H3. ur. des_ifs.
+      }
+      { ur. i. rr. ur. unseal "ra". ss. }
+    }
+    iMod "H". iDestruct "H" as "[H0 H1]". iFrame. auto.
+  Qed.
 
   Let wf: _ -> W -> Prop :=
         @mk_wf
@@ -121,7 +185,7 @@ Section SIMMODSEM.
       steps. mDesAll. des. subst.
       mAssert _ with "INVS".
       { iApply (initial_map_initialize with "INVS"). }
-      mUpd "A". mDesAll.
+      mDesAll.
       harg_tgt.
       { iModIntro. iFrame. iSplits; et. xtra. }
       steps.

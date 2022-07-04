@@ -20,9 +20,11 @@ Set Implicit Arguments.
 Instance MapRA0: URA.t := Excl.t unit.
 Instance MapRA1: URA.t := URA.prod (Excl.t unit) (Auth.t (Z ==> (Excl.t Z)))%ra.
 
-Definition map_points_to `{@GRA.inG MapRA1 Σ} (k: Z) (v: Z): iProp :=
-  OwnM (Excl.unit, Auth.white ((fun n => if Z.eq_dec n k then Excl.just v else Excl.unit): @URA.car (Z ==> (Excl.t Z))%ra)).
+Definition map_points_to_r (k: Z) (v: Z): @URA.car MapRA1 :=
+  (Excl.unit, Auth.white ((fun n => if Z.eq_dec n k then Excl.just v else Excl.unit): @URA.car (Z ==> (Excl.t Z))%ra)).
 
+Definition map_points_to `{@GRA.inG MapRA1 Σ} (k: Z) (v: Z): iProp :=
+  OwnM (map_points_to_r k v).
 
 Definition pending0 `{@GRA.inG MapRA0 Σ}: iProp :=
   OwnM (Excl.just tt).
