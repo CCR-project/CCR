@@ -172,6 +172,57 @@ Section SIMMODSEM.
     }
   Qed.
 
+  Lemma repeat_map A B (f: A -> B) (a: A) n
+    :
+    map f (repeat a n) = repeat (f a) n.
+  Proof.
+    induction n; ss. f_equal; auto.
+  Qed.
+
+  Lemma unfold_iter (E : Type -> Type) (A B : Type) (f : A -> itree E (A + B)) (x : A)
+    :
+    ITree.iter f x = lr <- f x;;
+                     match lr with
+                     | inl l => tau;; ITree.iter f l
+                     | inr r => Ret r
+                     end.
+  Proof.
+    eapply bisim_is_eq. eapply unfold_iter.
+  Qed.
+
+  Lemma points_to_nil blk ofs
+    :
+    ((blk, ofs) |-> []) = ε.
+  Proof.
+    Local Transparent URA.unit.
+    ss. unfold points_to, Auth.white. f_equal.
+    rewrite unfold_points_to.
+    extensionality _blk. extensionality _ofs. unfold andb. des_ifs.
+    exfalso. ss. lia.
+  Qed.
+
+  Lemma points_to_app blk ofs l0 l1
+    :
+    (blk, ofs) |-> (l0 ++ l1) = ((blk, ofs) |-> l0) ⋅ ((blk, (ofs + strings.length l0)%Z) |-> l1).
+  Proof.
+    revert ofs l1. induction l0; i; ss.
+    { rewrite points_to_nil. rewrite URA.unit_idl. ss.
+      replace (ofs + 0)%Z with ofs; ss. lia.
+    }
+    { rewrite points_to_split. rewrite (points_to_split blk ofs a l0).
+      erewrite IHl0. rewrite URA.add_assoc. f_equal; ss.
+      replace (ofs + Z.pos (Pos.of_succ_nat (strings.length l0)))%Z with
+        (ofs + 1 + strings.length l0)%Z; ss. lia.
+    }
+  Qed.
+
+  Lemma OwnM_combine M `{@GRA.inG M Σ} a0 a1
+    :
+    (OwnM a0 ** OwnM a1) -∗ OwnM (a0 ⋅ a1).
+  Proof.
+    iIntros "[H0 H1]". iCombine "H0 H1" as "H". auto.
+  Qed.
+
   Theorem correct: refines2 [MapI0.Map] [MapM.Map GlobalStbM].
   Proof.
     eapply adequacy_local2. econs; ss. i. rr.
@@ -182,22 +233,86 @@ Section SIMMODSEM.
     { unfold MapI0.initF, MapM.initF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
       { mDesAll. subst. mAssertPure False; ss. iApply (pending0_unique with "A1 A"). }
-      mDesAll. subst. steps. astart 100. acatch.
+      mDesAll. subst. steps. astart (1 + x). acatch.
       { eapply STBINCLM. stb_tac. ss. }
+      { eapply OrdArith.lt_from_nat. eapply Nat.lt_succ_diag_r. }
       icall_open _ with "".
       { iModIntro. instantiate (1:=Some _). ss. }
       { ss. }
-      ss. mDesAll. subst. steps. astop. steps.
-      iret _; ss.
-      iModIntro. iSplit.
-      { iLeft. iSplits. iSplitR "A"; eauto. iSplit; eauto.
-        { iPureIntro. esplits; eauto.
-          { instantiate (1:=List.repeat 0%Z (Z.to_nat x)). eapply repeat_length. }
-          { i. rewrite repeat_nth; auto. lia. }
+      ss. mDesAll. subst. ired_both. force_r. steps.
+      pattern 0%Z at 11.
+      match goal with
+      | |- ?P 0%Z => cut (P (x - x)%Z)
+      end; ss.
+      { rewrite Z.sub_diag. ss. }
+      mAssert (OwnM ((a, 0%Z) |-> (repeat (Vint 0) (x - x) ++ repeat Vundef x))) with "A1".
+      { rewrite Nat.sub_diag. ss. }
+      revert ctx1 ACC mr_src1.
+      cut (x <= x).
+      2:{ lia. }
+      generalize x at 1 4 5 8 15. intros n. induction n; i.
+      { rewrite unfold_iter. steps. des_ifs.
+        { exfalso. lia. }
+        astop. steps. iret _; ss.
+        iModIntro. iSplit.
+        { iLeft. iSplits. iSplitR "A"; eauto. iSplit; eauto.
+          { iPureIntro. esplits; eauto.
+            { instantiate (1:=List.repeat 0%Z (Z.to_nat x)). eapply repeat_length. }
+            { i. rewrite repeat_nth; auto. lia. }
+          }
+          { replace (Z.to_nat x) with (x - 0).
+            2:{ lia. }
+            rewrite app_nil_r. rewrite repeat_map. ss.
+          }
         }
-        admit "malloc -> calloc".
+        { ss. }
       }
-      { iSplits; eauto. }
+      { rewrite unfold_iter. steps. des_ifs.
+        2:{ exfalso. lia. }
+        steps. unfold scale_int at 2. des_ifs.
+        2:{ exfalso. eapply n0. eapply Z.divide_factor_r. }
+        steps.
+        assert (EQ: (0 + ((x - S n)%nat * 8) `div` 8) = (x - S n)).
+        { rewrite Nat.div_mul; ss. }
+        mAssert (OwnM ((a, Z.of_nat (x - S n)) |-> [Vundef]) ** (OwnM ((a, Z.of_nat (x - S n)) |-> [Vint 0]) -* OwnM ((a, 0%Z) |-> (repeat (Vint 0) (x - n) ++ repeat Vundef n)))) with "A2".
+        { rewrite points_to_app. rewrite points_to_split.
+          iDestruct "A2" as "[A0 [A1 A2]]".
+          iSplitL "A1".
+          { replace (x - S n: Z) with (0 + strings.length (repeat (Vint 0) (x - S n)))%Z; ss.
+            rewrite repeat_length. lia.
+          }
+          { iIntros "A1". rewrite points_to_app. iApply OwnM_combine.
+            iSplitL "A0 A1".
+            { assert (LEN: x - S n = length (repeat (Vint 0) (x - S n))%Z).
+              { symmetry. rewrite repeat_length. auto. }
+              iEval (rewrite LEN) in "A1".
+              iCombine "A0 A1" as "A". iEval (rewrite <- points_to_app) in "A".
+              replace (repeat (Vint 0) (x - S n) ++ [Vint 0]) with (repeat (Vint 0) ((x - S n) + 1)).
+              { replace (x - S n + 1) with (x - n); ss. lia. }
+              { rewrite repeat_app; ss. }
+            }
+            { replace (0 + strings.length (repeat (Vint 0) (x - n)))%Z with
+                (0 + strings.length (repeat (Vint 0) (x - S n)) + 1)%Z; ss.
+              repeat rewrite repeat_length. rewrite <- Z.add_assoc. lia.
+            }
+          }
+        }
+        mDesSep "A1" as "A1" "FR".
+        acatch.
+        { eapply STBINCLM. stb_tac. ss. }
+        { eapply OrdArith.lt_from_nat. eapply Nat.lt_succ_diag_r. }
+        icall_open (Some (_, _, _)) with "A1".
+        { iModIntro. iExists _. iFrame. iPureIntro. rewrite Z.div_mul; ss.
+          f_equal. f_equal. f_equal. lia.
+        }
+        { ss. }
+        steps. mDesAll. subst. steps.
+        mAssert _ with "FR POST" as "A2".
+        { iApply ("FR" with "POST"). }
+        replace (x - Z.pos (Pos.of_succ_nat n) + 1)%Z with (x - n)%Z.
+        2:{ lia. }
+        red in WLE. clarify. eapply IHn; eauto. lia.
+      }
     }
     econs; ss.
     { unfold MapI0.getF, MapM.getF, ccallU. init. iarg. mDesAll. subst.
