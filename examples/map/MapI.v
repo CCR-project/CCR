@@ -26,7 +26,7 @@ def set_by_user(k: int) ≡
   set(k, input())
 ***)
 
-Section I0.
+Section I.
   Local Open Scope string_scope.
 
   Definition initF: list val -> itree Es val :=
@@ -81,4 +81,4 @@ Section I0.
     Mod.sk := [("init", Sk.Gfun); ("get", Sk.Gfun); ("set", Sk.Gfun); ("set_by_user", Sk.Gfun)];
   |}
   .
-End I0.
+End I.

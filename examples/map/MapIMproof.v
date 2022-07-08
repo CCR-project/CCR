@@ -1,4 +1,4 @@
-Require Import MapHeader MapI0 MapM HoareDef SimModSem.
+Require Import MapHeader MapI MapM HoareDef SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -223,14 +223,14 @@ Section SIMMODSEM.
     iIntros "[H0 H1]". iCombine "H0 H1" as "H". auto.
   Qed.
 
-  Theorem correct: refines2 [MapI0.Map] [MapM.Map GlobalStbM].
+  Theorem correct: refines2 [MapI.Map] [MapM.Map GlobalStbM].
   Proof.
     eapply adequacy_local2. econs; ss. i. rr.
     econstructor 1 with (wf:=wf) (le:=inv_le top2); ss; et; cycle 2.
     { eexists (inl tt). rr. econs; ss. eapply to_semantic. iIntros "_". iRight. auto. }
     { eapply inv_le_PreOrder. ss. }
     econs; ss.
-    { unfold MapI0.initF, MapM.initF, ccallU. init. iarg. mDesAll. subst.
+    { unfold MapI.initF, MapM.initF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
       { mDesAll. subst. mAssertPure False; ss. iApply (pending0_unique with "A1 A"). }
       mDesAll. subst. steps. astart (1 + x). acatch.
@@ -315,7 +315,7 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold MapI0.getF, MapM.getF, ccallU. init. iarg. mDesAll. subst.
+    { unfold MapI.getF, MapM.getF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
       2:{ mDesAll. subst. steps. exfalso. lia. }
       mDesAll. des. steps. unfold scale_int. des_ifs.
@@ -336,7 +336,7 @@ Section SIMMODSEM.
       iSplit; eauto. iApply "A2". auto.
     }
     econs; ss.
-    { unfold MapI0.setF, MapM.setF, ccallU. init. iarg. mDesAll. subst.
+    { unfold MapI.setF, MapM.setF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
       2:{ mDesAll. subst. steps. exfalso. lia. }
       mDesAll. des. steps. unfold scale_int. des_ifs.
@@ -365,7 +365,7 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold MapI0.set_by_userF, MapM.set_by_userF, ccallU.
+    { unfold MapI.set_by_userF, MapM.set_by_userF, ccallU.
       init. iarg. mDesAll. subst. steps.
       rewrite STB_setM. steps.
       icall_weaken set_specM _ _ with "*".
