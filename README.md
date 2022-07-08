@@ -42,9 +42,16 @@ Building IMP compiler and compiling the example (IMP implementation of Echo)
 
 Fig. 1
 (examples/map)
-- module I_Map -> MapI.v
-- module A_Map -> MapA.v
-- pre/post conditions S_Map -> `MapStb` in MapA.v
+- module I_Map --> MapI.v
+- module A_Map --> MapA.v
+- pre/post conditions S_Map --> `MapStb` in MapA.v
+- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
+- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
+ 
+Sec. 2.4 Incremental and modular verification of the running example
+(examples/map)
+- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
+- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
 
 Fig. 3
 (ems/)
@@ -64,7 +71,7 @@ Fig. 5 and 8
 - rProp --> `iProp'` in IProp.v
 - Cond --> `fspec` in HoarDef.v
 - Conds --> `(alist gname fspec)`
-- <S |-a M> --> `Module SMod` in HoareDef.v
+- <S |-a A> and <S_in |-a A: S_out> --> `Module SMod` in HoareDef.v
 - WrapC --> `HoareCall` in HoardDef.v
 - WrapF --> `HoareFun` in HoardDef.v
 - ACCdef --> `APC` in HoareDef.v
