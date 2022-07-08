@@ -44,7 +44,7 @@ Fig. 1
 (examples/map)
 - module I_Map --> MapI.v
 - module A_Map --> MapA.v
-- pre/post conditions S_Map --> `MapStb` in MapA.v
+- pre/post conditions S_Map --> `MapStb` in MapHeader.v
 - proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
 - proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
  
@@ -65,31 +65,32 @@ Fig. 4
 - Trace --> `Tr.t` in Behavior.v
 - Beh --> composition of `Beh.of_program` in Behavior.v and `ModL.compile` in ModSem.v.
 
-Fig. 5 and 8
+Fig. 6
 (spc/)
 - PCM --> `URA.t` in PCM.v
 - rProp --> `iProp'` in IProp.v
 - Cond --> `fspec` in HoarDef.v
 - Conds --> `(alist gname fspec)`
-- <S |-a A> and <S_in |-a A: S_out> --> `Module SMod` in HoareDef.v
+- <S |-a M> --> `Module SMod` in HoareDef.v
 - WrapC --> `HoareCall` in HoardDef.v
 - WrapF --> `HoareFun` in HoardDef.v
-- ACCdef --> `APC` in HoareDef.v
-- ACCiter --> `_APC` in HoareDef.v
 
-Fig. 6
+Fig. 7
 - mem/Mem1.v
 
-Theorem 4.1 and Theorem 6.2 (Assumption Cancellation Theorem (ACT))
+Theorem 3.1 (Adequaccy)
+- `adequacy_local2` in ems/SimModSem.v
+
+Theorem 4.1 (Assumption Cancellation Theorem (ACT))
 - `adequacy_type2` in spc/Hoare.v
 
-Theorem 4.2 (Extensionality) and Theorem 6.1 (Strengthening)
-- `adequacy_weaken` in spc/Weakening.v (S ⊆_S S'--> `stb_weaker` in STB.v)
+Theorem 4.2 (Extensionality)
+- `adequacy_weaken` in spc/Weakening.v
 
 Lemma 4.3 (Safety)
 - `safe_mods_safe` in spc/Safe.v
 
-Theorem 7.1 (Separate Compilation Correctness)
+Theorem 6.1 (Separate Compilation Correctness)
 - `compile_behavior_improves` in imp/compiler_proof/Imp2AsmProof.v
 
 ## Technical Report to code mapping
@@ -162,4 +163,4 @@ Theorem 7
 
 Theorem 8
 - `compile_behavior_improves` in Imp2AsmProof.v
-
+- 
