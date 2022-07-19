@@ -5,6 +5,7 @@ stages:
 
 variables:
   CPU_CORES: "10"
+  OCAML: "ocaml-base-compiler.4.07.1"
 
 .template: &template
   stage: build
