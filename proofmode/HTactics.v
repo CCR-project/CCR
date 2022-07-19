@@ -288,7 +288,7 @@ Section HLEMMAS.
     { instantiate (1:=fr_src0' ⋅ c0 ⋅ mr_src). r_wf x0. }
     i. des. econs.
     { instantiate (1:=fr_src0' ⋅ mr_src ⋅ r1). r_wf H0. }
-    esplits; et.
+    red. esplits; et.
     eapply RSRC0.
     eapply URA.wf_mon. instantiate (1:=r1 ⋅ fr_src0' ⋅ c0). r_wf H0.
   Qed.
@@ -393,8 +393,8 @@ Section HLEMMAS.
         A (a0: shelve__ A)
 
         (D: X -> ord)
-        (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
-        (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
+        (P: option mname -> X -> Any.t -> Any.t -> iProp)
+        (Q: option mname -> X -> Any.t -> Any.t -> iProp)
         (le: A -> A -> Prop) mn r rg a n m mr_src0 mp_src0
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -434,7 +434,7 @@ Section HLEMMAS.
   Lemma harg_clo
         A Rn Invn
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mpr_src mp_tgt f_tgt k_src
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -464,17 +464,17 @@ Section HLEMMAS.
     ired_both. eapply ARG; et.
     red. econs.
     { instantiate (1:=rarg_src ⋅ mr_src). r_wf VALID. }
-    { ss. red. uipropall. esplits; et.
+    { ss. rr. uipropall. esplits; et.
       { rewrite URA.unit_id. et. }
       { eapply RSRC; et. eapply URA.wf_mon. instantiate (1:=(ctx ⋅ rarg_src)). r_wf VALID. }
-      { red. uipropall. }
+      { rr. uipropall. }
     }
   Qed.
 
   Lemma hret_clo
         A (a: shelve__ A)
         mn r rg n m mr_src mp_src a0
-        X (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
+        X (Q: option mname -> X -> Any.t -> Any.t -> iProp)
         x vret_src vret_tgt
         mp_tgt
         (le: A -> A -> Prop)

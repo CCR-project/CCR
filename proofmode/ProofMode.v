@@ -288,7 +288,7 @@ Section CURRENT.
     :
       P.
   Proof.
-    inv ACC. red in IPROP. uipropall.
+    inv ACC. rr in IPROP. uipropall.
   Qed.
 
   Lemma current_iProp_ex ctx A (P: A -> iProp)
@@ -296,7 +296,7 @@ Section CURRENT.
     :
       exists x, current_iProp ctx (P x).
   Proof.
-    inv ACC. red in IPROP. uipropall.
+    inv ACC. rr in IPROP. uipropall.
     des. exists x. econs; et.
   Qed.
 
@@ -1202,7 +1202,7 @@ Module PARSE.
     Proof.
       intros Q0 Q1 r.
       match goal with
-      | |- ?P0 r =>
+      | |- iProp_pred ?P0 r =>
         let P1 := (parse_iProp_tree hole P0) in
         change P0 with (from_iProp_tree P1)
       end.

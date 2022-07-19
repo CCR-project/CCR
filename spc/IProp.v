@@ -14,60 +14,132 @@ Ltac uipropall :=
 
 Section IPROP.
   Context {Σ: GRA.t}.
-  Definition iProp' := Σ -> Prop.
 
-  Definition Sepconj (P Q: iProp'): iProp' :=
+  Local Notation iPred := (Σ -> Prop).
+
+  Record iProp' :=
+    iProp_intro {
+        iProp_pred :> iPred;
+        iProp_mono: forall r0 r1 (WF: URA.wf r1) (LE: URA.extends r0 r1),
+          iProp_pred r0 -> iProp_pred r1;
+      }.
+
+  Program Definition Sepconj (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => exists a b, r = URA.add a b /\ P a /\ Q b).
-  Definition Pure (P: Prop): iProp' :=
+      (iProp_intro (fun r => exists a b, r = URA.add a b /\ P a /\ Q b) _).
+  Next Obligation.
+    red in LE. des; subst.
+    exists H, (H0 ⋅ ctx). rewrite URA.add_assoc. splits; auto.
+    eapply iProp_mono; eauto.
+    { eapply URA.wf_mon. instantiate(1:=H). r_wf WF. }
+    { exists ctx. auto. }
+  Qed.
+
+  Program Definition Pure (P: Prop): iProp' :=
     Seal.sealing
       "iProp"
-      (fun _ => P).
-  Definition Ex {X: Type} (P: X -> iProp'): iProp' :=
+      (iProp_intro (fun _ => P) _).
+
+  Program Definition Ex {X: Type} (P: X -> iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => exists x, P x r).
-  Definition Univ {X: Type} (P: X -> iProp'): iProp' :=
+      (iProp_intro (fun r => exists x, P x r) _).
+  Next Obligation.
+    esplits. eapply iProp_mono; eauto.
+  Qed.
+
+  Program Definition Univ {X: Type} (P: X -> iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => forall x, P x r).
-  Definition Own (r0: Σ): iProp' :=
+      (iProp_intro (fun r => forall x, P x r) _).
+  Next Obligation.
+    eapply iProp_mono; eauto.
+  Qed.
+
+  Program Definition Own (r0: Σ): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r1 => URA.extends r0 r1).
-  Definition And (P Q: iProp'): iProp' :=
+      (iProp_intro (fun r1 => URA.extends r0 r1) _).
+  Next Obligation.
+    etrans; eauto.
+  Qed.
+
+  Program Definition And (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => P r /\ Q r).
-  Definition Or (P Q: iProp'): iProp' :=
+      (iProp_intro (fun r => P r /\ Q r) _).
+  Next Obligation.
+    splits; auto; eapply iProp_mono; eauto.
+  Qed.
+
+  Program Definition Or (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => P r \/ Q r).
-  Definition Impl (P Q: iProp'): iProp' :=
+      (iProp_intro (fun r => P r \/ Q r) _).
+  Next Obligation.
+    des.
+    { left. eapply iProp_mono; eauto. }
+    { right. eapply iProp_mono; eauto. }
+  Qed.
+
+  Program Definition Impl (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => URA.wf r -> P r -> Q r).
-  Definition Wand (P Q: iProp'): iProp' :=
+      (iProp_intro (fun r0 => forall r1 (WF: URA.wf r1) (LE: URA.extends r0 r1),
+                        URA.wf r1 -> P r1 -> Q r1) _).
+  Next Obligation.
+    eapply H; eauto. etrans; eauto.
+  Qed.
+
+  Program Definition Wand (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp)).
-  Definition Emp: iProp' :=
+      (iProp_intro (fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp)) _).
+  Next Obligation.
+    eapply iProp_mono; [..|eapply H]; eauto.
+    { eapply URA.extends_add; auto. }
+    { eapply URA.wf_extends; eauto. eapply URA.extends_add; auto. }
+  Qed.
+
+  Program Definition Emp: iProp' :=
     Seal.sealing
       "iProp"
-      (eq ε).
-  Definition Persistently (P: iProp'): iProp' :=
+      (iProp_intro (fun _ => True) _).
+
+  Program Definition Persistently (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (Pure (P ε)).
-  Definition Later (P: iProp'): iProp' :=
+      (iProp_intro (fun r0 => P (URA.core r0)) _).
+  Next Obligation.
+    eapply iProp_mono; eauto.
+    { eapply URA.wf_core; eauto. }
+    { eapply URA.extends_core; eauto. }
+  Qed.
+
+  Program Definition Plainly (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      P.
-  Definition Upd (P: iProp'): iProp' :=
+      (iProp_intro (fun r => P ε) _).
+
+  Program Definition Later (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1).
+      (iProp_intro P _).
+  Next Obligation.
+    eapply iProp_mono; eauto.
+  Qed.
+
+  Program Definition Upd (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (iProp_intro (fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1) _).
+  Next Obligation.
+    red in LE. des. subst. hexploit (H (ctx0 ⋅ ctx)).
+    { rewrite URA.add_assoc. auto. }
+    i. des. esplits; [..|eauto]. eapply URA.wf_mon.
+    instantiate (1:=ctx0). r_wf H1.
+  Qed.
 
   Definition Entails (P Q : iProp') : Prop :=
     Seal.sealing
@@ -132,12 +204,12 @@ Section IPROP.
 
   Lemma Impl_intro_r: forall P Q R : iProp', Entails (And P Q) R -> Entails P (Impl Q R).
   Proof.
-    ii. uipropall. ii. eapply H; et.
+    ii. uipropall. ii. eapply H; et. splits; auto. eapply iProp_mono; eauto.
   Qed.
 
   Lemma Impl_elim_l: forall P Q R : iProp', Entails P (Impl Q R) -> Entails (And P Q) R.
   Proof.
-    ii. uipropall. ii. inv H0. eapply H; et.
+    ii. uipropall. ii. inv H0. eapply H; et. refl.
   Qed.
 
   Lemma Univ_intro: forall (A : Type) (P : iProp') (Ψ : A -> iProp'), (forall a : A, Entails P (Ψ a)) -> Entails P (Univ (fun a : A => Ψ a)).
@@ -174,7 +246,8 @@ Section IPROP.
 
   Lemma Emp_Sepconj_r: forall P : iProp', Entails (Sepconj Emp P) P.
   Proof.
-    ii. uipropall. ii. inv H. des; subst. rewrite URA.unit_idl. et.
+    ii. uipropall. ii. inv H. des; subst. eapply iProp_mono; eauto.
+    exists x. r_solve.
   Qed.
 
   Lemma Sepconj_comm: forall P Q : iProp', Entails (Sepconj P Q) (Sepconj Q P).
@@ -196,6 +269,49 @@ Section IPROP.
   Lemma Wand_elim_l: forall P Q R : iProp', Entails P (Wand Q R) -> Entails (Sepconj P Q) R.
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
+  Qed.
+
+  Lemma Persistently_mono: forall P Q : iProp', Entails P Q -> Entails (Persistently P) (Persistently Q).
+  Proof.
+    ii. uipropall. ii. eapply H; eauto. eapply URA.wf_core; eauto.
+  Qed.
+
+  Lemma Persistently_idem: forall P : iProp', Entails (Persistently P) (Persistently (Persistently P)).
+  Proof.
+    ii. uipropall. ii. rewrite URA.core_idem. auto.
+  Qed.
+
+  Lemma Persistently_emp: Entails Emp (Persistently Emp).
+  Proof.
+    uipropall.
+  Qed.
+
+  Lemma Persistently_univ: forall (A : Type) (Ψ : A -> iProp'), Entails (Univ (fun a => Persistently (Ψ a))) (Persistently (Univ (fun a => Ψ a))).
+  Proof.
+    ii. uipropall. ii. specialize (H x). uipropall.
+  Qed.
+
+  Lemma Persistently_ex: forall (A : Type) (Ψ : A -> iProp'), Entails (Persistently (Ex (fun a => Ψ a))) (Ex (fun a => Persistently (Ψ a))).
+  Proof.
+    ii. uipropall. ii. des. exists x. uipropall.
+  Qed.
+
+  Lemma Persistently_sep: forall P Q : iProp', Entails (Sepconj (Persistently P) Q) (Persistently P).
+  Proof.
+    ii. uipropall. ii. des. subst.
+    eapply iProp_mono; [..|eauto].
+    { eapply URA.wf_core; eauto. }
+    { eapply URA.extends_core; eauto. exists b. auto. }
+  Qed.
+
+  Lemma Persistently_and: forall P Q : iProp', Entails (And (Persistently P) Q) (Sepconj P Q).
+  Proof.
+    ii. uipropall. ii. des. esplits; eauto. rewrite URA.core_id. auto.
+  Qed.
+
+  Lemma Persistently_and2: forall P Q : iProp', Entails (And (Persistently P) (Persistently Q)) (Persistently (And P Q)).
+  Proof.
+    ii. uipropall.
   Qed.
 
   Lemma Upd_intro: forall P : iProp', Entails P (Upd P).

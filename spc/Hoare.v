@@ -110,7 +110,7 @@ Section CANCELSTB.
     eapply adequacy_type_t2m; et.
     i. exploit MAINM; et. i. des. esplits; et.
     i. specialize (RET ret_src ret_tgt). uipropall.
-    hexploit RET; et. i. red in H. uipropall.
+    hexploit RET; et. i. rr in H. uipropall.
     all:ss.
   Qed.
   End STRONGER.

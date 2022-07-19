@@ -347,7 +347,7 @@ Section SIMMODSEM.
         assert(SIM0: sim res1 mgr_src0 (<[h:=x::stk0]> mgr_tgt0)).
         { eapply sim_update_k; et. }
 
-        astart 0. astop.
+        astop. steps.
         force_l. esplits. steps.
         rewrite <- H3. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.

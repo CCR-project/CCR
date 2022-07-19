@@ -40,7 +40,10 @@ Section IPM.
   Qed.
   Canonical Structure uPredO : ofe := Ofe iProp' uPred_ofe_mixin.
 
-  Program Definition uPred_compl : Compl uPredO := λ c x, forall n, c n x.
+  Program Definition uPred_compl : Compl uPredO := λ c, iProp_intro (fun x => forall n, c n x) _.
+  Next Obligation.
+    i. ss. i. eapply iProp_mono; eauto.
+  Qed.
 
   Global Program Instance uPred_cofe : Cofe uPredO := {| compl := uPred_compl |}.
   Next Obligation.
@@ -114,8 +117,8 @@ Section IPM.
         { i. eapply H0; et. }
       }
     - ii. econs. uipropall. i. split.
-      { ii. eapply H; ss. eapply URA.wf_unit. }
-      { ii. eapply H; ss. eapply URA.wf_unit. }
+      { ii. eapply H; ss. eapply URA.wf_core. auto. }
+      { ii. eapply H; ss. eapply URA.wf_core. auto. }
     - exact Pure_intro.
     - exact Pure_elim.
     - exact And_elim_l.
@@ -137,13 +140,13 @@ Section IPM.
     - exact Sepconj_assoc.
     - exact Wand_intro_r.
     - exact Wand_elim_l.
-    - ii. uipropall. i. eapply H; et. eapply URA.wf_unit.
-    - ii. uipropall.
-    - ii. uipropall.
-    - ii. uipropall.
-    - ii. uipropall. i. des. eexists. uipropall. et.
-    - ii. uipropall. i. des. subst. ss.
-    - ii. uipropall. ii. inv H. esplits; et. rewrite URA.unit_idl. et.
+    - exact Persistently_mono.
+    - exact Persistently_idem.
+    - exact Persistently_emp.
+    - exact Persistently_and2.
+    - exact Persistently_ex.
+    - exact Persistently_sep.
+    - exact Persistently_and.
   Qed.
 
   Lemma iProp_bi_later_mixin:
@@ -152,7 +155,7 @@ Section IPM.
       (@Univ _) (@Ex _) Sepconj Persistently Later.
   Proof.
     econs.
-    - ii. uipropall.
+    - ii. uipropall. rr. split. ii. ss. apply H. auto.
     - ii. uipropall.
     - ii. uipropall.
     - ii. uipropall. ii. specialize (H x). uipropall.
@@ -186,28 +189,16 @@ Section IPM.
   Qed.
   Global Instance iProp_bi_bupd: BiBUpd iProp := {| bi_bupd_mixin := iProp_bupd_mixin |}.
 
-  Global Instance iProp_bupd_absorbing (P: iProp): Absorbing (bupd P).
+  Global Instance iProp_absorbing (P: iProp): Absorbing P.
   Proof.
-    ii. repeat red. unfold bupd, bi_bupd_bupd in *. ss. uipropall.
-    ii. repeat red in H. uipropall. des. subst. exploit H2; et.
-    eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
-  Qed.
-
-  Global Instance iProp_own_absorbing r: Absorbing (Own r).
-  Proof.
-    ii. repeat red. uipropall. i. repeat red in H. uipropall.
-    des. subst. etrans; eauto. exists a. apply URA.add_comm.
-  Qed.
-
-  Global Instance iProp_ownm_absorbing M `{@GRA.inG M Σ} (m: M): Absorbing (OwnM m).
-  Proof.
-    unfold OwnM. eapply iProp_own_absorbing.
+    rr. uipropall. i. rr in H. uipropall. des. eapply iProp_mono; eauto.
+    exists a. rewrite H. r_solve.
   Qed.
 
   Global Instance iProp_pure_forall: BiPureForall iProp.
   Proof.
-    ii. red. red. uipropall. ii. red. red in H.
-    uipropall. i. specialize (H a). red in H. uipropall.
+    ii. rr. uipropall. i. rr. rr in H. uipropall.
+    i. specialize (H a). rr in H. uipropall.
   Qed.
 End IPM.
 Arguments OwnM: simpl never.
@@ -339,7 +330,7 @@ Section ILEMMAS.
   Lemma OwnM_valid (M: URA.t) `{@GRA.inG M Σ} (m: M):
     OwnM m -∗ ⌜URA.wf m⌝.
   Proof.
-    uipropall. i. red. unfold OwnM, Own in *. uipropall.
+    rr. uipropall. i. red. rr. unfold OwnM, Own in *. uipropall.
     unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in WF. eapply GRA.embed_wf. et.
   Qed.
@@ -348,10 +339,10 @@ Section ILEMMAS.
     :
       #=> ⌜P⌝ ⊢ ⌜P⌝.
   Proof.
-    red. uipropall. i.
+    rr. uipropall. i. rr. uipropall.
     hexploit (H URA.unit).
     { rewrite URA.unit_id. et. }
-    i. des. red in H1. red. uipropall.
+    i. des. rr in H1. uipropall.
   Qed.
 
   Lemma Own_Upd_set

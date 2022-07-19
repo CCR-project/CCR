@@ -38,13 +38,13 @@ Section SIMMODSEM.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et.
     { ss. }
-    2: { exists tt. econs; ss; red; uipropall. }
+    2: { exists tt. econs; ss; rr; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccallU. steps. astart 10.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop. force_l. eexists. steps.
+    - destruct x; ss. astop. steps. force_l. eexists. steps.
       hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
       acatch. hcall _ _ with "*"; auto.
@@ -53,7 +53,7 @@ Section SIMMODSEM.
         esplits; et. lia. }
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify.
-      steps. astop.
+      steps. astop. steps.
       force_l. eexists. steps.
       hret _; ss. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.

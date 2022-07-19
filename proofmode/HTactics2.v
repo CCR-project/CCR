@@ -59,7 +59,7 @@ Section MODE.
   Lemma harg_clo
         A Rn Invsn Invtn
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src mp_tgt (mr_src mr_tgt: Σ) f_tgt k_src
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -102,7 +102,7 @@ Section MODE.
       clear - RSRC T VALID. unfold OwnT in *.
       uipropall. des. clarify. esplits; et.
       { rewrite URA.unit_id; ss. }
-      { r. uipropall. }
+      { rr. uipropall. }
     }
     Unshelve. all: try exact 0.
   Qed.
@@ -144,28 +144,19 @@ Section MODE.
   Proof.
     split; i.
     - rr in H. inv H. rewrite URA.add_comm in GWF. eapply URA.wf_mon; et.
-    - rr. unfold from_iPropL. econs; et. { rewrite URA.unit_idl; ss. } r; uipropall.
+    - rr. unfold from_iPropL. econs; et. { rewrite URA.unit_idl; ss. } rr; uipropall.
   Qed.
 
-  Definition Exactly (r0: Σ): iProp' :=
-    Seal.sealing
-      "iProp"
-      (fun r1 => r0 = r1).
-
+  Definition Exactly (r0: Σ) (Xtra: iProp): iProp :=
+    (Own r0 ∧ (⌜Entails (Own r0) Xtra⌝))%I.
+  
   Hint Unfold Exactly: iprop.
-
-  Lemma Exactly_spec
-        r0 r1
-    :
-      Exactly r0 r1 <-> r0 = r1
-  .
-  Proof. unfold Exactly. uipropall. Qed.
 
   Lemma harg_clo_tgt
         A Xn Xtra Rn Invtn mp_tgt mr_tgt
         Invtn' Xn'
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -175,7 +166,7 @@ Section MODE.
         (ACC: current_iPropL ctx [(Rn, P mn x varg_tgt varg); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', Exactly rx Xtra)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m true a
                    (Any.pair mp_src mr_src↑, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt))))
@@ -201,9 +192,12 @@ Section MODE.
     ired_both. eapply ARG.
     eapply current_iPropL_push; et.
     eapply current_iPropL_push; et.
-    2: { instantiate (1:=rx). cbn. uipropall. }
-    eapply current_iPropL_nil; et.
-    { eapply wf_extends; et. exists rarg_src. r_solve. }
+    { instantiate (1:=rx). eapply current_iPropL_nil; et.
+      eapply wf_extends; et. exists rarg_src. r_solve.
+    }
+    { cbn. rr. uipropall. splits; [refl|].
+      rr. uipropall. i. eapply iProp_mono; eauto.
+    }
   Unshelve. all: try exact 0.
   Qed.
 
@@ -256,7 +250,7 @@ Section MODE.
         (ENTAIL: bi_entails (from_iPropL ips) (bupd (P mn x varg_tgt varg ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, Exactly rx Xtra%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m true a
                    (Any.pair mp_src mr_src↑, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt))))
@@ -277,7 +271,7 @@ Section MODE.
   Lemma hret_clo_both
         A (a: shelve__ A)
         mn r rg n m mp_src mp_tgt (mr_src mr_tgt: Σ) a0
-        Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> Σ -> Prop)
+        Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> iProp)
         Xt (Qt: option mname -> Xt -> Any.t -> Any.t -> iProp)
         xs xt vret_src vret_tgt
         (le: A -> A -> Prop)
@@ -286,7 +280,7 @@ Section MODE.
 
         ctx rx
         Invtn Xn Xtra
-        (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)])
+        (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, Exactly rx Xtra)])
 
         (WLE: le a0 a)
 
@@ -321,12 +315,17 @@ Section MODE.
       rename x into vret_tgt_tgt. rename c into rt.
       specialize (UPDATABLE vret_tgt_tgt).
       unfold from_iPropL in IPROP.
-      uipropall. des. clarify. rename a1 into rx.
+      uipropall. des. clarify.
+      rename a1 into rx0.
       hexploit (UPDATABLE (rt ⋅ rx)); et.
       { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. }
+      { esplits; eauto. rr in IPROP4. uipropall. eapply IPROP4; eauto.
+        { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1 ⋅ rt). r_solve. }
+        { refl. }
+      }
       { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. }
-      i; des. clarify. esplits; et.
-      r_wf H.
+      i. des. subst. esplits; [|eauto|eauto].
+      { r_wf H. }
     }
     des. exists (rret_src, mr_src1 ⋅ mr_tgt1).
     steps.
@@ -413,7 +412,7 @@ Section MODE.
 
         ctx0 rx
         Invtn Xn Xtra
-        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)])
+        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Exactly rx Xtra)%I)])
 
         (UPDATABLE: forall x_tgt,
            bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt: iProp) **
@@ -456,7 +455,7 @@ Section MODE.
     { exploit SIMPLE; et. intros T. uipropall.
       exploit (T ro_tgt); et.
       { eapply wf_extends; try apply x. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
-      intro U. r in U. uipropall.
+      intro U. rr in U. uipropall.
     }
     subst.
     assert (exists mr_src1 ro_src fr_src,
@@ -475,15 +474,19 @@ Section MODE.
       specialize (UPDATABLE x0).
       rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
       uipropall. exploit UPDATABLE; swap 1 2.
-      { esplits; et. rr. uipropall. }
+      { esplits; et.
+        { rr in HD1. uipropall. eapply HD1; [|refl].
+          eapply wf_extends; try apply x.
+          exists (ro_tgt ⋅ fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve.
+        }
+        { rr. uipropall. }
+      }
       { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). instantiate (1:=ε). r_solve. }
       { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
       i; des. clarify.
+      rr in x8. uipropall. des; ss.
       esplits; et.
       { eapply wf_extends; et. r. exists b. r_solve. }
-      { r in x8. uipropall. des; ss. }
-      { r in x8. uipropall. des; ss. }
-      { r in x8. uipropall. des; ss. }
     }
     des. (ired_both; apply sim_itreeC_spec; econs).
     exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
@@ -502,7 +505,7 @@ Section MODE.
     eapply POST; et.
     { eapply current_iPropL_push; et.
       eapply current_iPropL_push; et; cycle 1.
-      { cbn. r. uipropall. refl. }
+      { rr. uipropall. refl. }
       eapply current_iPropL_push; et; cycle 1.
       { cbn. eapply RSRC0; et. eapply wf_extends; et. exists (c ⋅ fr_src ⋅ fr_tgt ⋅ c0). r_solve. }
       eapply current_iPropL_push; et; cycle 1.
@@ -528,7 +531,7 @@ Section MODE.
         ctx0 rx
         ips Xtra
         (ACC: current_iPropL ctx0 ips)
-        (ENTAIL: bi_entails (from_iPropL ips) (bupd ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))))
+        (ENTAIL: bi_entails (from_iPropL ips) (bupd ((OwnT mr_tgt0) ** (Exactly rx Xtra))))
 
         (UPDATABLE: forall x_tgt,
            bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt: iProp) **
@@ -575,7 +578,7 @@ Section MODE.
         A Xn Xtra Rn Frn Invtn mp_tgt mr_tgt
         mn r rg
         Invtn' Xn'
-        X (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
+        X (Q: option mname -> X -> Any.t -> Any.t -> iProp)
         mpr_src f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -585,7 +588,7 @@ Section MODE.
         (ACC: current_iPropL ctx [(Rn, Q (Some mn) x vret_src vret_tgt); (Frn, OwnT fr_tgt); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Exactly rx Xtra)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m true a
                    (mpr_src, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, vret_src)))
@@ -614,9 +617,13 @@ Section MODE.
     eapply ARG.
     eapply current_iPropL_push; et.
     eapply current_iPropL_push; et.
-    2: { instantiate (1:=rx). cbn. uipropall. }
-    eapply current_iPropL_nil; et.
-    { eapply wf_extends; et. exists (rret ⋅ rf). r_solve. }
+    { instantiate (1:=rx). eapply current_iPropL_nil; et.
+      { eapply wf_extends; et. exists (rret ⋅ rf). r_solve. }
+    }
+    { rr. uipropall. splits.
+      { refl. }
+      { rr. uipropall. i. eapply iProp_mono; eauto. }
+    }
   Unshelve. all: try exact 0.
   Qed.
 
@@ -634,7 +641,7 @@ Section MODE.
         (ENTAIL: bi_entails (from_iPropL ips) (bupd (Q (Some mn) x vret_src vret_tgt ** OwnT fr_tgt ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Exactly rx Xtra)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m true a
                    (mpr_src, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, vret_src)))
@@ -683,7 +690,7 @@ Section MODE.
         (* (ACC: current_iPropL ctx0 ips) *)
         (* (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))) *)
         Xn Invtn Xtra
-        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx0)%I)])
+        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Exactly rx0 Xtra)%I)])
         FR
         (ENTAIL: bi_entails Xtra (R a0 mp_src0 mp_tgt0 ** FR))
         (* (WFA: forall a1 mp_src1 mp_tgt1 (mr_src1 mr_tgt1: Σ) (INV: I mr_src1), *)
@@ -697,7 +704,7 @@ Section MODE.
             (WLE: le a0 a1)
             ctx1 rx1
             (ACC: current_iPropL ctx1 [("INVT", OwnT mr_tgt1);
-                                      ("X", ((R a1 mp_src1 mp_tgt1 ** FR) ∧ Exactly rx1)%I)]),
+                                      ("X", (Exactly rx1 (R a1 mp_src1 mp_tgt1 ** FR))%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr true true _a
                    (Any.pair mp_src1 mr_src1↑, k_src (ctx1, tt))
                    (Any.pair mp_tgt1 mr_tgt1↑, k_tgt (ctx1 ⋅ rx1, tt)))
@@ -726,10 +733,17 @@ Section MODE.
           eapply current_iPropL_push; et.
           uipropall. des. clarify.
           exploit ENTAIL; try apply HD0.
-          { eapply wf_extends; et. r. exists (ctx0 ⋅ hdr). r_solve. }
+          { eapply wf_extends; et. r. exists (ctx0 ⋅ hdr). instantiate (1:=hdr0).  r_solve. }
+          { rr in HD1. uipropall. eapply HD1.
+            { eapply wf_extends; [eapply TL0|]. exists (ctx0 ⋅ hdr). r_solve. }
+            { auto. }
+          }            
           i; des. clarify.
           eapply current_iPropL_push; cycle 1.
-          { ss. esplits; et. }
+          { ss. instantiate (1:=a ⋅ b). splits; auto.
+            rr. uipropall. i. eapply ENTAIL; auto.
+            rr in HD1. uipropall. eapply HD1; eauto.
+          }
           eapply current_iPropL_nil.
           { r_wf TL0. }
         }
@@ -741,9 +755,21 @@ Section MODE.
           eapply current_iPropL_nil in TL0. ss.
           des. clarify.
           exploit ENTAIL; try apply HD0.
-          { eapply wf_extends; et. exists (ctx0 ⋅ hdr). r_solve. }
-          i; des. clarify. esplits; et.
-          r_solve.
+          { eapply wf_extends; et. exists (ctx0 ⋅ hdr). instantiate (1:=hdr0). r_solve. }
+          { rr in HD1. uipropall. eapply HD1.
+            { eapply wf_extends; [eapply TL0|]. exists (ctx0 ⋅ hdr). r_solve. }
+            { auto. }
+          }            
+          i; des. clarify. hexploit (ENTAIL rx0).
+          { eapply wf_extends; eauto. etrans ;eauto.
+            exists (ctx0 ⋅ hdr). r_solve.
+          }
+          { rr in HD1. uipropall. eapply HD1; [|refl].
+            { eapply wf_extends; eauto. etrans ;eauto.
+              exists (ctx0 ⋅ hdr). r_solve.
+            }
+          }
+          { i. des. subst. esplits; eauto. r_solve. }
         }
         des. subst.
 
@@ -760,19 +786,19 @@ Section MODE.
         steps. force_l. esplits; et. steps. force_l. esplits; et. steps. force_l. esplits; et.
         steps. force_l; et. steps. gstep. econs; eauto.
         { econs. eapply to_semantic. iIntros "[A B]". iFrame. iStopProof.
-          uipropall. i. r in H0. des; clarify. esplits; et. r. uipropall.
+          uipropall. i. eapply iProp_mono; et.
         }
 
         i. inv WF. clarify. steps.
         hexploit1 RSRC.
         { eapply wf_extends; et. r. exists (c ⋅ rf ⋅ rf_src ⋅ c0). r_solve. }
         rename c into ri. rename c0 into ctx1.
-        r in RSRC. autounfold with iprop in RSRC; autorewrite with iprop in RSRC. des. clarify.
+        rr in RSRC. autounfold with iprop in RSRC; autorewrite with iprop in RSRC. des. clarify.
         rename a into rinv.
         force_r. exists (ri, ctx1 ⋅ (rinv ⋅ rf_src)). steps. force_r; ss.
-        { eapply wf_extends; et.
-          Local Transparent OwnT. r in RSRC1. uipropall. r in RSRC1. des; clarify.
-          r. exists (ctx). r_solve. }
+        { rr in RSRC1. uipropall. red in RSRC1. des. subst.
+          eapply wf_extends; eauto. exists ctx. r_solve.
+        }
         steps. force_r. esplits. steps. force_r; et. steps.
 
         move CIH at bottom.
@@ -780,7 +806,17 @@ Section MODE.
         { i. eapply ARG; try apply ACC0. etrans; et. }
         { eapply current_iPropL_push; et.
           eapply current_iPropL_push; cycle 1.
-          { ss. uipropall. unfold Exactly. uipropall. esplits; et. }
+          { ss. rr. uipropall. splits.
+            { refl. }
+            rr. uipropall. i. r in H0. des. subst.
+            exists (rinv ⋅ ctx), rf_src. esplits.
+            { r_solve. }
+            { eapply iProp_mono; [..|eauto]; eauto.
+              { eapply wf_extends; eauto. exists rf_src. r_solve. }
+              { exists ctx. r_solve. }
+            }
+            { eauto. }
+          }
           eapply current_iPropL_nil.
           eapply wf_extends; try apply _ASSUME.
           exists (ri ⋅ rf). r_solve.
