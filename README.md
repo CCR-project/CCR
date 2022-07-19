@@ -1,4 +1,4 @@
-# Abstraction Logic: The Marriage of Contextual Refinement and Separation Logic
+# Conditional Contextual Refinement
 
 ## Dependencies
 Our development successfully compiles with following versions (in Linux, OS X):
@@ -22,13 +22,13 @@ Our development successfully compiles with following versions (in Linux, OS X):
 
 All packages can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
 
+## How to build
+- make -j[N] -k
+
 ## Delta with paper (and technical report)'s presentation
 
 - In the paper and technical report, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
 - In the technical report, we use explicit event GetCaller (using monadic style) but in development we just thread it.
-
-## How to build
-- make -j[N] -k
 
 ## EMS extraction example
 Running extracted examples (abstractions and implementation of MW, Echo, and etc.)
@@ -41,55 +41,57 @@ Building IMP compiler and compiling the example (IMP implementation of Echo)
 ## Paper to code mapping
 
 Fig. 1
-- P1MW -> MWC0.v
-- P2MW -> MWB0.v
-- IMW -> MWC1.v
-- AMW -> MWC2.v
-
-Fig. 2
-- it can be seen as a simplified version of "cannon" example in technical report. (examples/cannon directory)
+(examples/map)
+- module I_Map --> MapI.v
+- module A_Map --> MapA.v
+- pre/post conditions S_Map --> `MapStb` in MapHeader.v
+- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
+- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
+ 
+Sec. 2.4 Incremental and modular verification of the running example
+(examples/map)
+- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
+- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
 
 Fig. 3
-- PApp -> MWApp0.v
-- IApp -> MWApp1.v
-- AApp -> MWApp2.v
-
-Fig. 4
-- EEMS --> `Es` in ModSem.v
-- EMS --> `ModSem.t` in ModSem.v
+(ems/)
+- E_P --> `eventE` in ModSem.v
+- E_EMS --> `Es` in ModSem.v
 - Mod --> `Mod.t` in ModSem.v
-- Trace --> `Tr.t` in Behavior.v
-- Beh --> composition of `Beh.of_program` in Behavior.v and `ModL.compile` in ModSem.v.
 - Mi ≤ctx Ma --> `refines2` in ModSem.v
 
-Fig. 5
-- rProp --> `iProp'` in IProp.v
-- PCM --> `URA.t` in PCM.v
-- Cond --> `fspec` in HoareDef.v
-- ESPC --> `hEs` in HoareDef.v
-- PAbs --> `SModSem.t` in HoareDef.v
-- [] --> `SModSem.to_src` in HoareDef.v
-- S_in \rtimes A : S_out --> `SModSem.to_tgt` in HoareDef.v
-- CallDef --> `HoareCall` in HoareDef.v
-- FunDef --> `HoareFun` in HoareDef.v
-- APCiDef --> `_APC` in HoareDef.v
-- APCDef --> `APC` in HoareDef.v
-
-Theorem 3.1
-- `adequacy_type` (`adequacy_type2`) in Hoare.v
-
-Lemma 3.2
-- safe --> `safe_itree` in Safe.v
-- `safe_mods_safe` in Safe.v
-
-Theorem 3.4
-- `compile_behavior_improves` in Imp2AsmProof.v
+Fig. 4
+(ems/)
+- Trace --> `Tr.t` in Behavior.v
+- Beh --> composition of `Beh.of_program` in Behavior.v and `ModL.compile` in ModSem.v.
 
 Fig. 6
-- MemOpen.v, MWHeader.v
+(spc/)
+- PCM --> `URA.t` in PCM.v
+- rProp --> `iProp'` in IProp.v
+- Cond --> `fspec` in HoarDef.v
+- Conds --> `(alist gname fspec)`
+- <S |-a M> --> `Module SMod` in HoareDef.v
+- WrapC --> `HoareCall` in HoardDef.v
+- WrapF --> `HoareFun` in HoardDef.v
 
 Fig. 7
-- examples/repeat directory.
+- mem/Mem1.v
+
+Theorem 3.1 (Adequaccy)
+- `adequacy_local2` in ems/SimModSem.v
+
+Theorem 4.1 (Assumption Cancellation Theorem (ACT))
+- `adequacy_type2` in spc/Hoare.v
+
+Theorem 4.2 (Extensionality)
+- `adequacy_weaken` in spc/Weakening.v
+
+Lemma 4.3 (Safety)
+- `safe_mods_safe` in spc/Safe.v
+
+Theorem 6.1 (Separate Compilation Correctness)
+- `compile_behavior_improves` in imp/compiler_proof/Imp2AsmProof.v
 
 ## Technical Report to code mapping
 
@@ -161,4 +163,4 @@ Theorem 7
 
 Theorem 8
 - `compile_behavior_improves` in Imp2AsmProof.v
-
+- 

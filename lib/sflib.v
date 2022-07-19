@@ -953,7 +953,6 @@ Tactic Notation "econsby" tactic(tac) :=
   ].
 
 
-(* Youngju's Tactics *)
 
 Lemma f_equal6 (A1 A2 A3 A4 A5 A6 B: Type) (f: A1 -> A2 -> A3 -> A4 -> A5 -> A6 -> B)
       (x1 y1: A1) (EQ1: x1 = y1)
