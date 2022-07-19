@@ -28,9 +28,9 @@ variables:
 
 ## Build jobs
 
-build-coq.8.14.1:
+build-coq.8.15.2:
   <<: *template
   variables:
-    OPAM_PINS: "coq version 8.14.1"
+    OPAM_PINS: "coq version 8.15.2"
   tags:
   - fp
