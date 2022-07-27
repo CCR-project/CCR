@@ -87,9 +87,6 @@ End FSPEC.
 Section PROOF.
   (* Context {myRA} `{@GRA.inG myRA Σ}. *)
   Context {Σ: GRA.t}.
-  Let GURA: URA.t := GRA.to_URA Σ.
-  Local Existing Instance GURA.
-
 
   Definition mput E `{pE -< E} `{eventE -< E} (mr: Σ): itree E unit :=
     st <- trigger PGet;; '(mp, _) <- ((Any.split st)?);;
@@ -111,14 +108,18 @@ Section PROOF.
     Ret mp
   .
 
+End PROOF.
 
-  Definition update_and_discard (fr0: Σ): itree Es (Σ * Σ) :=
-    '(rarg, fr1, mr1) <- trigger (Choose (Σ * Σ * Σ));;
-    mr0 <- mget;;
-    guarantee(URA.updatable (fr0 ⋅ mr0) (rarg ⋅ fr1 ⋅ mr1));;;
-    mput mr1;;;
-    Ret (fr1, rarg)
-  .
+Notation "'update_and_discard' fr0" :=
+  ('(rarg, fr1, mr1) <- trigger (Choose (_ * _ * _));;
+   mr0 <- mget;;
+   guarantee(URA.updatable (fr0 ⋅ mr0) (rarg ⋅ fr1 ⋅ mr1));;;
+   mput mr1;;;
+   Ret (fr1, rarg)) (at level 60)
+.
+
+Section PROOF.
+  Context {Σ: GRA.t}.
 
   Definition HoareCall
              (mn: mname)

@@ -222,8 +222,8 @@ Section HLEMMAS.
 
         (WEAKER: fspec_weaker fsp1 fsp0)
 
-        ctx0 I
-        (ACC: current_iProp ctx0 I)
+        fr0 I
+        (ACC: current_iProp fr0 I)
 
         (UPDATABLE:
            I ⊢ #=> (FR ** R a0 mp_src0 mp_tgt0 ** (fsp1.(precond) (Some mn) x varg_src varg_tgt: iProp)))
@@ -234,14 +234,14 @@ Section HLEMMAS.
         (POST: forall (vret_tgt : Any.t) (mr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Any.t)
                       (WLE: le a0 a1)
-                      ctx1
-                      (ACC: current_iProp ctx1 (FR ** R a1 mp_src1 mp_tgt1 ** fsp1.(postcond) (Some mn) x vret_src vret_tgt))
+                      fr1
+                      (ACC: current_iProp fr1 (FR ** R a1 mp_src1 mp_tgt1 ** fsp1.(postcond) (Some mn) x vret_src vret_tgt))
           ,
                 gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr true true a
-                       (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src)) (mp_tgt1, k_tgt vret_tgt))
+                       (Any.pair mp_src1 mr_src1↑, k_src (fr1, vret_src)) (mp_tgt1, k_tgt vret_tgt))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
-             (Any.pair mp_src0 mr_src0, (HoareCall mn tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
+             (Any.pair mp_src0 mr_src0, (HoareCall mn tbr ord_cur fsp0 fn varg_src) fr0 >>= k_src)
              (mp_tgt0, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -249,23 +249,27 @@ Section HLEMMAS.
     ired_both. apply sim_itreeC_spec. econs.
     hexploit (WEAKER x). i. des.
     assert (exists mr_src0' rarg_src fr_src0',
-               (<<UPDATABLE: URA.wf (ctx0 ⋅ (mr_src0' ⋅ (rarg_src ⋅ fr_src0')))>>) /\
+               (<<UPDATABLE: URA.updatable fr0 (mr_src0' ⋅ (rarg_src ⋅ fr_src0'))>>) /\
                (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src0'>>) /\
                (<<FRS: FR fr_src0'>>) /\
                (<<PRE: fsp0.(precond) (Some mn) x_tgt varg_src varg_tgt rarg_src>>)).
-    { inv ACC. uipropall. hexploit UPDATABLE.
-      { eapply URA.wf_mon. eapply GWF. }
-      { eapply IPROP. }
-      { et. }
+    { inv ACC. uipropall.
+      hexploit UPDATABLE; try apply IPROP.
+      { eapply URA.updatable_wf; et. }
       i. des. subst.
-      hexploit PRE; et. i. uipropall. hexploit (H0 b); et.
-      { eapply URA.wf_mon in H. rewrite URA.add_comm in H. eapply URA.wf_mon in H. auto. }
-      { instantiate (1:=a2 ⋅ b0 ⋅ ctx0).
-        replace (b ⋅ (a2 ⋅ b0 ⋅ ctx0)) with (a2 ⋅ b0 ⋅ b ⋅ ctx0); auto. r_solve. }
-      i. des. esplits; et.
-      { replace (ctx0 ⋅ (b0 ⋅ (r1 ⋅ a2))) with (r1 ⋅ (a2 ⋅ b0 ⋅ ctx0)); auto. r_solve. }
+      hexploit PRE; et. i. uipropall.
+      hexploit (H b); et.
+      { eapply URA.updatable_wf; et. etrans; et. etrans; et. eapply URA.extends_updatable.
+        exists (a2 ⋅ b0). r_solve. }
+      i; des.
+      esplits; et.
+      etrans; et. etrans; et.
+      replace (b0 ⋅ (r1 ⋅ a2)) with (b0 ⋅ a2 ⋅ r1) by r_solve.
+      eapply URA.updatable_add; et. rewrite URA.add_comm; ss.
     }
     des. exists (rarg_src, fr_src0', mr_src0').
+    repeat (ired_both; apply sim_itreeC_spec; econs). rewrite Any.pair_split. cbn. ired_both.
+    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     { r_wf UPDATABLE0. }
     repeat (ired_both; apply sim_itreeC_spec; econs). exists x_tgt.

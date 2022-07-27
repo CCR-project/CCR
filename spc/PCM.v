@@ -481,6 +481,19 @@ Module URA.
     eexists. eauto.
   Qed.
 
+  Lemma updatable_wf
+        `{M: t}
+        a0 a1
+        (WF: wf a0)
+        (UPD: updatable a0 a1)
+    :
+    <<WF: wf a1>>
+  .
+  Proof.
+    r in UPD. specialize (UPD unit). erewrite ! URA.unit_id in UPD. eauto.
+  Qed.
+
+
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
     unit := (unit, unit);

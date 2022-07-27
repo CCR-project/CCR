@@ -404,17 +404,6 @@ Section CANCEL.
     exfalso. eapply Heq. et.
   Qed.
 
-  Lemma updatable_wf
-        (a0 a1: Σ)
-        (WF: URA.wf a0)
-        (UPD: URA.updatable a0 a1)
-    :
-    <<WF: URA.wf a1>>
-  .
-  Proof.
-    r in UPD. specialize (UPD ε). erewrite ! URA.unit_id in UPD. eauto.
-  Qed.
-
   Lemma rsum_update2
         mrs0 mn mr
         (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
@@ -489,7 +478,7 @@ Section CANCEL.
 
     steps. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
-    { rewrite FIND. unfold HoareCall, update_and_discard, mput, mget. steps.
+    { rewrite FIND. unfold HoareCall, mput, mget. steps.
       erewrite zip_state_get; et. steps.
       erewrite zip_state_get; et. steps.
       des; clarify. destruct tbr; ss.
@@ -499,7 +488,7 @@ Section CANCEL.
       { destruct cur; ss. hexploit x5; ss. intro T. rewrite T in *; ss. }
       steps. rewrite FINDMID. steps.
     }
-    unfold HoareCall, update_and_discard, mput, mget.
+    unfold HoareCall, mput, mget.
 
     (*** exploiting both_tau ***)
     rewrite STB. ss. mred. force_r.
@@ -554,7 +543,7 @@ Section CANCEL.
         eapply URA.updatable_add; et. refl.
       }
       unshelve esplits; et.
-      { eapply updatable_wf; et. etrans; et. eapply URA.extends_updatable.
+      { eapply URA.updatable_wf; et. etrans; et. eapply URA.extends_updatable.
         erewrite <- rsum_minus_rsum with (mn:=mn); et. exists (rsum_minus mn mrs1). r_solve.
       }
       steps. exists t. steps. unshelve esplits; et.
@@ -564,7 +553,7 @@ Section CANCEL.
     Unfocus.
     { fold sk. fold sk. set (mn0:=SModSem.mn (SMod.get_modsem md sk)) in *.
       fold Any_tgt in x3.
-      unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun, update_and_discard, mget, mput.
+      unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun, mget, mput.
       rename x3 into PRECOND.
       steps. exists x0.
       steps. exists varg_src. steps.
@@ -582,14 +571,14 @@ Section CANCEL.
         refl.
       }
       unshelve esplits; eauto.
-      { eapply updatable_wf; et. etrans; et. rewrite <- URA.add_assoc. eapply URA.updatable_add; try refl.
+      { eapply URA.updatable_wf; et. etrans; et. rewrite <- URA.add_assoc. eapply URA.updatable_add; try refl.
         eapply URA.extends_updatable.
         r. eexists (fr1 ⋅ rsum_minus mn0 (update mrs0 mn mr1)); et.
         erewrite <- rsum_minus_rsum; ss; et. r_solve. }
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       deflag. guclo bindC_spec. econs.
       { gbase. eapply CIH; ss; try refl.
-        eapply updatable_wf; et. etrans; et.
+        eapply URA.updatable_wf; et. etrans; et.
         eapply URA.extends_updatable. r. exists fr1. r_solve. }
       { ii. ss. des_ifs_safe. des; ss. clarify.
         steps.
@@ -657,7 +646,7 @@ Section CANCEL.
     unfold Any_src, Any_mid, Any_tgt in *. rewrite FINDTGT. rewrite FINDMID. steps.
     eexists. steps. eexists. steps.
     eexists (entry_r).
-    steps. unfold update_and_discard, mput, mget. steps.
+    steps. unfold mput, mget. steps.
     rewrite zip_state_get; et.
     rewrite Any.pair_split. steps.
     unshelve esplits; et.
@@ -675,7 +664,7 @@ Section CANCEL.
     steps. rewrite zip_state_get; et. rewrite Any.pair_split.
     steps. rewrite zip_state_get; et. rewrite Any.pair_split. steps.
     { eapply RET; [|et]. eapply URA.wf_mon.
-      instantiate (1:=ε). rewrite URA.unit_id. eapply updatable_wf; et. etrans; et. etrans; et.
+      instantiate (1:=ε). rewrite URA.unit_id. eapply URA.updatable_wf; et. etrans; et. etrans; et.
       { instantiate (1:=fr1 ⋅ mrs1 (SModSem.mn (SMod.get_modsem md sk))). eapply URA.extends_updatable.
         erewrite <- rsum_minus_rsum; et. exists (rsum_minus (SModSem.mn (SMod.get_modsem md sk)) mrs1).
         r_solve. }

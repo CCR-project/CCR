@@ -130,7 +130,8 @@ Section IPROP.
     eapply iProp_mono; eauto.
   Qed.
 
-  Program Definition Upd (P: iProp'): iProp' :=
+  (*** this is deprecated in 1.1 ***)
+  Program Definition WeakUpd (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (iProp_intro (fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1) _).
@@ -139,6 +140,14 @@ Section IPROP.
     { rewrite URA.add_assoc. auto. }
     i. des. esplits; [..|eauto]. eapply URA.wf_mon.
     instantiate (1:=ctx0). r_wf H1.
+  Qed.
+
+  Program Definition Upd (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (iProp_intro (fun r0 => exists r1, P r1 /\ (forall ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx))) _).
+  Next Obligation.
+    esplits; et. i. eapply H1. r in LE. des. subst. eapply URA.wf_mon; et. instantiate (1:=ctx0). r_wf H2.
   Qed.
 
   Definition Entails (P Q : iProp') : Prop :=
@@ -321,21 +330,18 @@ Section IPROP.
 
   Lemma Upd_mono: forall P Q : iProp', Entails P Q -> Entails (Upd P) (Upd Q).
   Proof.
-    ii. uipropall. ii. exploit H0; et. i. des.
-    exploit (H r1); et. eapply URA.wf_mon; et.
+    ii. uipropall. ii. des. esplits; eauto. eapply H; et. specialize (H1 ε). rewrite ! URA.unit_id in H1. et.
   Qed.
 
   Lemma Upd_trans: forall P : iProp', Entails (Upd (Upd P)) (Upd P).
   Proof.
-    ii. uipropall. ii. exploit H; et. i. des. exploit x1; eauto.
+    ii. uipropall. ii. des. esplits; et.
   Qed.
 
   Lemma Upd_frame_r: forall P R : iProp', Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
   Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et.
-    { rewrite URA.add_assoc. et. }
-    i. des. esplits; [..|eapply x1|eapply H2]; ss.
-    rewrite <- URA.add_assoc. et.
+    ii. uipropall. ii. unfold Sepconj in *. des. subst. esplits; et. i.
+    rewrite <- URA.add_assoc in H. eapply H2 in H. r_wf H.
   Qed.
 End IPROP.
 Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
