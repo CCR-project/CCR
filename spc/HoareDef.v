@@ -112,6 +112,13 @@ Section PROOF.
   .
 
 
+  Definition update_and_discard (fr0: Σ): itree Es (Σ * Σ) :=
+    '(rarg, fr1, mr1) <- trigger (Choose (Σ * Σ * Σ));;
+    mr0 <- mget;;
+    guarantee(URA.updatable (fr0 ⋅ mr0) (rarg ⋅ fr1 ⋅ mr1));;;
+    mput mr1;;;
+    Ret (fr1, rarg)
+  .
 
   Definition HoareCall
              (mn: mname)
@@ -119,11 +126,9 @@ Section PROOF.
              (ord_cur: ord)
              (fsp: fspec):
     gname -> Any.t -> stateT (Σ) (itree Es) Any.t :=
-    fun fn varg_src ctx =>
+    fun fn varg_src fr0 =>
 
-      '(rarg, fr, mr) <- trigger (Choose (Σ * Σ * Σ));;
-      mput mr;;;
-      guarantee(URA.wf (rarg ⋅ fr ⋅ ctx ⋅ mr));;;
+      '(fr1, rarg) <- update_and_discard fr0;;
 
       x <- trigger (Choose fsp.(meta));; varg_tgt <- trigger (Choose Any_tgt);;
       guarantee(fsp.(precond) (Some mn) x varg_src varg_tgt rarg);;; (*** precondition ***)
@@ -132,14 +137,14 @@ Section PROOF.
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      '(rret, ctx) <- trigger (Take (Σ * Σ));;
-      mr <- mget;;
-      assume(URA.wf (rret ⋅ fr ⋅ ctx ⋅ mr));;;
+      rret <- trigger (Take Σ);;
+      mr2 <- mget;;
+      assume(URA.wf (rret ⋅ fr1 ⋅ mr2));;;
 
       vret_src <- trigger (Take Any.t);;
       assume(fsp.(postcond) (Some mn) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret (ctx, vret_src) (*** return to body ***)
+      Ret (rret ⋅ fr1, vret_src) (*** return to body ***)
   .
 
 End PROOF.
@@ -348,9 +353,9 @@ Section CANCEL.
                                     end)).
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ) (itree Es) :=
-    fun _ '(hCall tbr fn varg_src) 'ctx =>
+    fun _ '(hCall tbr fn varg_src) 'fr0 =>
       f <- (stb fn)ǃ;;
-      HoareCall mn tbr ord_cur f fn varg_src ctx
+      HoareCall mn tbr ord_cur f fn varg_src fr0
   .
 
   Definition handle_pE_tgt: pE ~> itree Es :=
@@ -381,24 +386,22 @@ Section CANCEL.
              (body: (option mname * Any.t) -> itree hEs Any.t): option mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
-    '(rarg, ctx) <- trigger (Take _);;
+    '(rarg) <- trigger (Take _);;
     mr <- mget;;
-    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
+    assume(URA.wf (rarg ⋅ mr));;;
     let ord_cur := D x in
     assume(P mn_caller x varg_src varg_tgt rarg);;; (*** precondition ***)
 
-    '(ctx, vret_src) <- interp_hCallE_tgt
+    '(fr0, vret_src) <- interp_hCallE_tgt
                           ord_cur
                           (interp_hEs_tgt
                              (match ord_cur with
                               | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
                               | _ => body (mn_caller, varg_src)
-                              end)) ctx;;
+                              end)) rarg;;
 
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(rret, mr) <- trigger (Choose _);;
-    mput mr;;;
-    guarantee(URA.wf (rret ⋅ ctx ⋅ mr));;;
+    '(_, rret) <- update_and_discard fr0;;
     guarantee(Q mn_caller x vret_src vret_tgt rret);;; (*** postcondition ***)
     Ret vret_tgt (*** return ***)
   .
@@ -425,21 +428,19 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     option mname * Any_tgt -> itree Es ((Σ) * (option mname * X * Any.t)) := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
-    '(rarg, ctx) <- trigger (Take _);;
+    '(rarg) <- trigger (Take _);;
     mr <- mget;;
-    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
+    assume(URA.wf (rarg ⋅ mr));;;
     assume(P mn_caller x varg_src varg_tgt rarg);;; (*** precondition ***)
-    Ret (ctx, (mn_caller, x, varg_src))
+    Ret (rarg, (mn_caller, x, varg_src))
   .
 
   Definition HoareFunRet
              {X: Type}
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop):
-    option mname -> X -> ((Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, vret_src) =>
+    option mname -> X -> ((Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(fr0, vret_src) =>
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(rret, mr) <- trigger (Choose _);;
-    mput mr;;;
-    guarantee(URA.wf (rret ⋅ ctx ⋅ mr));;;
+    '(_, rret) <- update_and_discard fr0;;
     guarantee(Q mn x vret_src vret_tgt rret);;; (*** postcondition ***)
     Ret vret_tgt (*** return ***)
   .
