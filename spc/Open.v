@@ -1462,6 +1462,7 @@ Section ADQ.
     steps. force_l; auto. steps. des; clarify.
     rewrite Any.pair_split in _UNWRAPU. clarify.
     force_r. eexists (c2, c3). steps.
+    rewrite Any.upcast_downcast in *. clarify.
     force_r; auto. steps. force_r. eexists.
     force_r; et. steps. gstep. econs; et.
   Qed.
