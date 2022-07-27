@@ -537,7 +537,7 @@ Section CANCEL.
     { ii. ss. des_ifs_safe. des. subst.
       steps. eexists (rret, frs ⋅ rsum_minus mn mrs1). steps.
       rewrite zip_state_get; et.
-      rewrite Any.pair_split. steps.
+      rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
       unshelve esplits; et.
       { r_wf RWF. }
       steps. exists t. steps. unshelve esplits; et.

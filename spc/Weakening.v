@@ -100,7 +100,7 @@ Section PROOF.
       { esplits; et. }
       i. destruct w1. red in WF. des; clarify.
       rewrite Any.pair_split in _UNWRAPU. des; clarify.
-      steps.
+      steps. rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
       assert (exists rret_tgt,
                  (<<POSTTGT: postcond f (Some mn) x x1 vret rret_tgt>>) /\
                  (<<VALIDTGT: URA.wf (rret_tgt ⋅ c1 ⋅ c3 ⋅ mr0)>>)
