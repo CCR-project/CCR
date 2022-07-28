@@ -542,6 +542,7 @@ Section CANCEL.
         replace (rarg ⋅ fr1 ⋅ mr1 ⋅ rsum_minus mn mrs0) with ((rarg ⋅ rsum_minus mn mrs0 ⋅ mr1) ⋅ fr1) by r_solve.
         eapply URA.updatable_add; et. refl.
       }
+      rewrite Any.upcast_downcast. steps.
       unshelve esplits; et.
       { eapply URA.updatable_wf; et. etrans; et. eapply URA.extends_updatable.
         erewrite <- rsum_minus_rsum with (mn:=mn); et. exists (rsum_minus mn mrs1). r_solve.

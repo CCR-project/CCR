@@ -95,7 +95,7 @@ Section PROOF.
 
   Definition mget E `{pE -< E} `{eventE -< E}: itree E Σ :=
     st <- trigger PGet;; '(_, mr) <- ((Any.split st)?);;
-    mr↓ǃ
+    mr↓?
   .
 
   Definition pput E `{pE -< E} `{eventE -< E} (mp: Any.t): itree E unit :=
