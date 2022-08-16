@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import ProofMode.
+Require Import IPM.
 Require Import SimModSem.
 Require Import STB.
 
