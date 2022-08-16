@@ -20,6 +20,7 @@ variables:
     - _opam/
   only:
   - master@youngju/cccr
+  - v1.1@youngju/cccr
   - /^ci/@youngju/cccr
   - /^time/@youngju/cccr
   except:
