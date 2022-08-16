@@ -55,5 +55,7 @@ Section SIMMODSEM.
       iApply isim_trivial_ret. iSplits; eauto.
       { iApply world_wf_trivial_inv_with. }
       iPureIntro. f_equal. f_equal. lia.
+  Unshelve.
+    all: ss.
   Qed.
 End SIMMODSEM.
