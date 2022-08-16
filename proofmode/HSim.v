@@ -589,13 +589,13 @@ Section SIM.
 
   Lemma hsim_adequacy_aux `{PreOrder _ le}:
     forall
-      f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt mr_src ctx X (x: X) Q mn_caller fuel w0
+      f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt (mr_src: Σ) fr X (x: X) Q mn_caller fuel w0
       (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
-                    (inv_with w0 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) ctx fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
+                    (inv_with w0 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) (fr ⋅ mr_src) fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
       paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 (@eq Any.t))
             f_src f_tgt w0
-            (Any.pair st_src mr_src,
-             mylift fuel mn_caller x ctx Q itr_src)
+            (Any.pair st_src mr_src↑,
+             mylift fuel mn_caller x fr Q itr_src)
             (st_tgt, itr_tgt).
   Proof.
     ginit. gcofix CIH. i.
@@ -620,7 +620,7 @@ Section SIM.
             { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
             { iApply "POST". }
           }
-          i. ss. eauto.
+          i. ss; eauto.
         }
       }
       { rewrite SPEC. steps. destruct fsp. ss.
@@ -633,7 +633,7 @@ Section SIM.
             { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
             { iApply "POST". }
           }
-          i. ss. eauto.
+          i. ss; eauto.
         }
       }
     }
@@ -682,7 +682,7 @@ Section SIM.
           { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
           { iApply "POST". }
         }
-        i. ss. eauto.
+        i. ss; eauto.
       }
     }
     { destruct fuel; steps.
@@ -719,13 +719,13 @@ Section SIM.
 
   Lemma hsim_adequacy `{PreOrder _ le}:
     forall
-      f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt mr_src ctx X (x: X) Q mn_caller w0
+      f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt mr_src fr X (x: X) Q mn_caller w0
       (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
-                    (inv_with w0 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) ctx None f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
+                    (inv_with w0 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) (fr ⋅ mr_src) None f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
       paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 (@eq Any.t))
             f_src f_tgt w0
-            (Any.pair st_src mr_src,
-             (interp_hCallE_tgt mn stb o (interp_hEs_tgt itr_src) ctx) >>= (HoareFunRet Q mn_caller x))
+            (Any.pair st_src mr_src↑,
+             (interp_hCallE_tgt mn stb o (interp_hEs_tgt itr_src) fr) >>= (HoareFunRet Q mn_caller x))
             (st_tgt, itr_tgt).
   Proof.
     i. hexploit hsim_adequacy_aux; eauto.
@@ -1327,20 +1327,22 @@ Section SIM.
 
   Variant hframeC_aux (r: forall R_src R_tgt
                              (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-                             (ctx: Σ),
+                             (res: Σ),
                       option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
           {R_src R_tgt}
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-          (ctx: Σ)
+          (res: Σ)
     : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
   | hframeC_aux_intro
-      res
+      res0 frm
       f_src f_tgt fuel
       st_src st_tgt
-      (PRE: URA.wf (ctx ⋅ res))
-      (SIM: r _ _ (fun st_src st_tgt ret_src ret_tgt => Own res -* #=> Q st_src st_tgt ret_src ret_tgt) (ctx ⋅ res) fuel f_src f_tgt st_src st_tgt)
+      (PRE: URA.wf res)
+      (UPD: URA.updatable res (res0 ⋅ frm))
+      (SIM: r _ _ (fun st_src st_tgt ret_src ret_tgt => Own frm -* #=> Q st_src st_tgt ret_src ret_tgt)
+              res0 fuel f_src f_tgt st_src st_tgt)
     :
-      hframeC_aux r Q ctx fuel f_src f_tgt st_src st_tgt
+      hframeC_aux r Q res fuel f_src f_tgt st_src st_tgt
   .
 
   Lemma hframeC_aux_mon:
@@ -1348,46 +1350,62 @@ Section SIM.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hframeC_aux_mon: paco.
 
-  Lemma current_iProp_frame_own ctx0 ctx1 P
-        (CUR: current_iProp (ctx0 ⋅ ctx1) (Own ctx1 -* P))
+  Lemma current_iProp_updatable (res0 res1: Σ) P
+        (WF: URA.wf res1)
+        (UPD: URA.updatable res1 res0)
+        (CUR: current_iProp res0 P)
     :
-      current_iProp ctx0 P.
+      current_iProp res1 P.
   Proof.
-    inv CUR. uipropall. hexploit IPROP.
-    2:{ exists URA.unit. eapply URA.unit_id. }
-    { eapply URA.wf_mon. instantiate (1:=ctx0). r_wf GWF. }
-    i. econs; [|eauto]. r_wf GWF.
+    inv CUR. econs; try eassumption. etrans; et.
   Qed.
 
-  Lemma current_iProp_frame_own_rev ctx0 ctx1 P
-        (CUR: current_iProp ctx0 (Own ctx1 ** P))
+  Lemma current_iProp_frame_own res0 res1 P
+        (WF: URA.wf ((res0 ⋅ res1): Σ))
+        (CUR: current_iProp (res0) (Own res1 -* P))
     :
-      current_iProp (ctx0 ⋅ ctx1) P.
+      current_iProp (res0 ⋅ res1) P.
+  Proof.
+    inv CUR. uipropall. hexploit IPROP.
+    2:{ refl. }
+    { eapply URA.updatable_wf; try apply WF; et. eapply URA.updatable_add; et. refl. }
+    i. econs; eauto. eapply URA.updatable_add; et. refl.
+  Qed.
+
+  Lemma current_iProp_frame_own_rev res0 res1 P
+        (CUR: current_iProp res0 (Own res1 ** P))
+    :
+      exists res2, URA.wf res0 /\ URA.updatable res0 (res2 ⋅ res1) ∧ current_iProp res2 P.
   Proof.
     inv CUR. uipropall.
     unfold URA.extends in *. des; clarify.
-    econs; [|eauto]. eapply URA.wf_mon.
-    instantiate (1:=ctx). r_wf GWF.
+    exists (ctx ⋅ b). esplits; et.
+    { etrans; et. replace (ctx ⋅ b ⋅ res1) with (res1 ⋅ ctx ⋅ b) by r_solve; ss. }
+    econs; eauto.
+    { eapply URA.updatable_wf; et. etrans; et. eapply URA.extends_updatable. exists res1. r_solve. }
+    { eapply URA.extends_updatable. exists ctx. r_solve. }
   Qed.
 
-  Lemma current_iProp_own_wf ctx res
-        (CUR: current_iProp ctx (Own res))
-    :
-      URA.wf (ctx ⋅ res).
-  Proof.
-    inv CUR. uipropall. unfold URA.extends in *. des. clarify.
-    eapply URA.wf_mon.
-    instantiate (1:=ctx0). r_wf GWF.
-  Qed.
+  (* Lemma current_iProp_own_wf ctx res *)
+  (*       (CUR: current_iProp ctx (Own res)) *)
+  (*   : *)
+  (*     URA.wf (ctx ⋅ res). *)
+  (* Proof. *)
+  (*   inv CUR. uipropall. unfold URA.extends in *. des. clarify. *)
+  (*   eapply URA.wf_mon. *)
+  (*   instantiate (1:=ctx0). r_wf GWF. *)
+  (* Qed. *)
 
   Lemma hframeC_aux_spec: hframeC_aux <10= gupaco9 (_hsim) (cpn9 _hsim).
   Proof.
     eapply wrespect9_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
-    { econs 1; eauto. eapply current_iProp_upd. eapply current_iProp_frame_own; eauto. }
+    { econs 1; eauto. eapply current_iProp_upd. eapply current_iProp_updatable; et.
+      eapply current_iProp_frame_own in RET; eauto. eapply URA.updatable_wf; et. }
     { econs 2; eauto.
-      { eapply current_iProp_frame_own.
+      { eapply current_iProp_updatable; et. eapply current_iProp_frame_own; eauto.
+        { eapply URA.updatable_wf; et. }
         eapply current_iProp_entail.
         { eapply PRE0. }
         iIntros "[[H0 H1] H2] H3".
@@ -1397,52 +1415,39 @@ Section SIM.
         iSplitL "H0"; [iExact "H0"|].
         iExact "H3".
       }
-      { i. eapply rclo9_clo_base. econs.
-        { instantiate (1:=res). eapply current_iProp_own_wf.
-          eapply current_iProp_entail.
-          { eapply ACC. }
-          iIntros "[[[H0 H1] H2] H3]". ss.
-        }
+      { i. eapply rclo9_clo_base.
+        eapply current_iProp_entail in ACC; cycle 1.
+        { iIntros "[[[H0 H1] H2] H3]". iCombine "H1 H0 H2 H3" as "H". iExact "H". }
+        eapply current_iProp_frame_own_rev in ACC. des.
+        econs; et.
         { eapply POST; eauto.
-          eapply current_iProp_frame_own_rev.
           eapply current_iProp_entail.
-          { eapply ACC. }
-          iIntros "[[[H0 H1] H2] H3]".
-          iSplitL "H1"; [iExact "H1"|].
-          iSplitR "H3"; [|iExact "H3"].
-          iSplitR "H2"; [|iExact "H2"].
-          iExact "H0".
+          { eapply ACC1. }
+          iIntros "[H0 [H1 H2]]".
+          iFrame.
         }
       }
     }
     { econs 3; eauto. }
     { econs 4; eauto.
-      { eapply current_iProp_frame_own.
+      { eapply current_iProp_updatable; et.
+        eapply current_iProp_frame_own; et.
+        { eapply URA.updatable_wf; et. }
         eapply current_iProp_entail.
         { eapply PRE0. }
-        iIntros "[[H0 H1] H2] H3".
-        iSplitR "H2"; [|iExact "H2"].
-        iSplitR "H1"; [|iExact "H1"].
-        instantiate (1:= _ ** _).
-        iSplitL "H0"; [iExact "H0"|].
-        iExact "H3".
+        iIntros "[[H0 H1] H2] H3". iFrame. iCombine "H0 H3" as "H". iAssumption.
       }
       { des. esplits; eauto.
-        i. eapply rclo9_clo_base. econs.
-        { instantiate (1:=res). eapply current_iProp_own_wf.
-          eapply current_iProp_entail.
-          { eapply ACC. }
-          iIntros "[[[H0 H1] H2] H3]". ss.
-        }
+        i. eapply rclo9_clo_base.
+        eapply current_iProp_entail in ACC; cycle 1.
+        { iIntros "[[[H0 H1] H2] H3]". iCombine "H1 H0 H2 H3" as "H". iExact "H". }
+        eapply current_iProp_frame_own_rev in ACC. des.
+        econs; et.
         { eapply SIM; eauto.
-          eapply current_iProp_frame_own_rev.
           eapply current_iProp_entail.
-          { eapply ACC. }
-          iIntros "[[[H0 H1] H2] H3]".
-          iSplitL "H1"; [iExact "H1"|].
-          iSplitR "H3"; [|iExact "H3"].
-          iSplitR "H2"; [|iExact "H2"].
-          iExact "H0".
+          { eapply ACC1. }
+          iIntros "[H0 [H1 H2]]".
+          iFrame.
         }
       }
     }
@@ -1486,15 +1491,18 @@ Section SIM.
     autounfold with iprop in IPROP.
     autorewrite with iprop in IPROP. des. clarify.
     guclo hframeC_aux_spec. econs.
-    { instantiate (1:=a). eapply URA.wf_mon. instantiate (1:=b). r_wf GWF. }
+    { ss. }
+    { rewrite URA.add_comm. eauto. }
     { guclo hmonoC_spec. econs.
-      { gbase. eapply SIM. econs; [|eauto]. r_wf GWF.
+      { gbase. eapply SIM. econs; eauto.
+        - eapply URA.updatable_wf; et. etrans; et. eapply URA.extends_updatable. exists a; r_solve.
+        - refl.
       }
       { i. ss. iIntros "H0". iModIntro. iIntros "H1".
         iApply bupd_trans. iApply "H0".
         iStopProof. uipropall.
-        i. red in H. des. clarify. esplits; [|eauto].
-        eapply URA.wf_mon. instantiate (1:=ctx0). r_wf H0.
+        i. red in H. des. clarify. esplits; [eassumption|eauto].
+        i. eapply URA.wf_extends. { exists ctx. r_solve. } r_wf H.
       }
     }
   Qed.

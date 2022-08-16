@@ -284,7 +284,7 @@ Section SIMMODSEM.
           { iApply (OwnM_Upd with "O").
             eapply Auth.auth_update with (a':=res1) (b':=_is_stack h (stk1)).
             bar. ii. ss. des. clarify. esplits; et.
-            assert(D: ctx0 h = Excl.unit).
+            assert(D: ctx h = Excl.unit).
             { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
             extensionality h0. subst res1. unfold insert, fn_insert. des_ifs.
             - ur. rewrite D. unfold _is_stack. ur. des_ifs.
@@ -336,7 +336,7 @@ Section SIMMODSEM.
         { iApply (OwnM_Upd with "O").
           eapply Auth.auth_update with (a':=res1) (b':=_is_stack h (x::stk0)).
           bar. ii. ss. des. clarify. esplits; et.
-          assert(D: ctx0 h = Excl.unit).
+          assert(D: ctx h = Excl.unit).
           { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
           extensionality h0. subst res1. unfold insert, fn_insert. des_ifs.
           - ur. rewrite D. unfold _is_stack. ur. des_ifs.
