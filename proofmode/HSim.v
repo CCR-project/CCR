@@ -24,6 +24,8 @@ Ltac ired_r := try (prw _red_gen 1 1 0).
 Ltac ired_both := ired_l; ired_r.
 
 
+(*** `hsim` is an intermediate step towards `isim`, which is defined in iProp like weakest precondition (wp).
+Both `hsim` and `isim` take the postcondition (Q) as an argument like the weakest precondition (wp). ***)
 
 Section SIM.
   Context `{Σ: GRA.t}.
@@ -1505,6 +1507,57 @@ Section SIM.
         i. eapply URA.wf_extends. { exists ctx. r_solve. } r_wf H.
       }
     }
+  Qed.
+
+  Variant hupdC (r: forall R_src R_tgt
+                            (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+                            (fmr: Σ),
+                     option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+          {R_src R_tgt}
+          (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+          (fmr: Σ)
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+  | hupdC_intro
+      f_src f_tgt fuel
+      st_src st_tgt
+      fmr1
+      (WF: URA.wf fmr)
+      (UPD: URA.updatable fmr fmr1)
+      (SIM: r _ _ Q fmr1 fuel f_src f_tgt st_src st_tgt)
+    :
+      hupdC r Q fmr fuel f_src f_tgt st_src st_tgt
+  .
+
+  Lemma hupdC_mon:
+    monotone9 hupdC.
+  Proof. ii. inv IN; econs; et. Qed.
+  Hint Resolve hupdC_mon: paco.
+
+  Lemma hupdC_spec: hupdC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Proof.
+    eapply wrespect9_uclo; eauto with paco.
+    econs; eauto with paco. i. inv PR. eapply GF in SIM.
+    induction SIM using _hsim_ind2; i; clarify; ired_both.
+    { econs 1; eauto. eapply current_iProp_updatable; et. }
+    { econs 2; eauto. { eapply current_iProp_updatable; et. }
+      i. eapply rclo9_clo_base. econs; eauto; try refl. apply ACC.
+    }
+    { econs 3; eauto. }
+    { econs 4; eauto. { eapply current_iProp_updatable; et. } des. esplits; eauto. i. hexploit SIM; eauto.
+      i. eapply rclo9_clo_base. econs; eauto; try refl. apply ACC.
+    }
+    { econs 5; eauto. i. eapply rclo9_clo_base. econs; eauto. }
+    { econs 6; eauto. }
+    { econs 7; eauto. }
+    { econs 8; eauto. des. esplits; eauto. }
+    { econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 11; eauto. des. esplits; eauto. }
+    { econs 12; eauto. }
+    { econs 13; eauto. }
+    { econs 14; eauto. }
+    { econs 15; eauto. }
+    { econs 16; eauto. eapply rclo9_clo_base. econs; eauto. }
   Qed.
 End SIM.
 #[export] Hint Resolve _hsim_mon: paco.
