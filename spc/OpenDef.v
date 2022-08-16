@@ -6,8 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
-Require Export ProofMode.
+Require Export IPM.
 Require Import HoareDef STB.
 Require Import Red IRed.
 
