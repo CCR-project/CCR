@@ -698,135 +698,133 @@ Section SIM.
       X_src (x_src: X_src) X_tgt (x_tgt: X_tgt) Q_src Q_tgt mn_caller fuel w0
       (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
                     (Q_tgt mn_caller x_tgt ret_tgt ret_tgt) -*
-                    (Own mr_tgt ** Own fr_tgt ** (inv_with w0 st_src st_tgt) **
-                         (Q_src mn_caller x_src ret_src ret_tgt)))
+                    ((inv_with w0 st_src st_tgt) ** (Q_src mn_caller x_src ret_src ret_tgt)))
                  (fr_src ⋅ mr_src)
                  fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
       paco8 (_sim_itree (mk_wf2 I) le) bot8 Any.t Any.t (lift_rel (mk_wf2 I) le w0 (@eq Any.t))
             f_src f_tgt w0
-            (Any.pair st_src mr_src↑,
-             mylift stb_src fuel mn_caller x_src fr_src Q_src itr_src)
+            (Any.pair st_src (mr_src ⋅ mr_tgt)↑,
+             mylift stb_src fuel mn_caller x_src (fr_src ⋅ fr_tgt) Q_src itr_src)
             (Any.pair st_tgt mr_tgt↑,
              mylift stb_tgt None mn_caller x_tgt fr_tgt Q_tgt itr_tgt).
   Proof.
-    (* ginit. gcofix CIH. i. *)
-    (* remember (st_src, itr_src). remember (st_tgt, itr_tgt). *)
-    (* revert st_src st_tgt itr_src itr_tgt Heqp Heqp0 CIH. *)
-    (* induction SIM using hsim_ind; i; clarify. *)
-    (* { eapply current_iPropL_convert in RET. mDesAll. destruct fuel; steps. *)
-    (*   { astop. steps. unfold inv_with in RET. mDesAll. hret _; eauto. *)
-    (*     iModIntro. iSplitL "H"; auto. *)
-    (*   } *)
-    (*   { unfold inv_with in RET. mDesAll. hret _; eauto. *)
-    (*     iModIntro. iSplitL "H"; auto. } *)
-    (* } *)
-    (* { eapply current_iPropL_convert in PRE. mDesAll. destruct fuel; steps. *)
-    (*   { astop. steps. rewrite SPEC. steps. destruct fsp. ss. *)
-    (*     unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1". *)
-    (*     { iModIntro. iSplitL "A1"; eauto. } *)
-    (*     { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. } *)
-    (*     { steps. gbase. hexploit CIH. *)
-    (*       { eapply POST. eapply current_iProp_entail; [eauto|]. *)
-    (*         start_ipm_proof. iSplitR "POST". *)
-    (*         { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. } *)
-    (*         { iApply "POST". } *)
-    (*       } *)
-    (*       i. ss; eauto. *)
-    (*     } *)
-    (*   } *)
-    (*   { rewrite SPEC. steps. destruct fsp. ss. *)
-    (*     unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1". *)
-    (*     { iModIntro. iSplitL "A1"; eauto. } *)
-    (*     { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. } *)
-    (*     { steps. gbase. hexploit CIH. *)
-    (*       { eapply POST. eapply current_iProp_entail; [eauto|]. *)
-    (*         start_ipm_proof. iSplitR "POST". *)
-    (*         { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. } *)
-    (*         { iApply "POST". } *)
-    (*       } *)
-    (*       i. ss; eauto. *)
-    (*     } *)
-    (*   } *)
-    (* } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. exploit IHSIM; eauto. i. destruct fuel1; ss. *)
-    (*     { astart t0. *)
-    (*       match goal with *)
-    (*       | |- ?P0 (_, ?itr1) _ => *)
-    (*         match (type of x1) with *)
-    (*         | ?P1 (_, ?itr0) _ => *)
-    (*           replace itr1 with itr0 *)
-    (*         end *)
-    (*       end; auto. *)
-    (*       grind. destruct x0, x2. destruct u, u0. grind. *)
-    (*     } *)
-    (*     { astop. steps. } *)
-    (*   } *)
-    (*   { exploit IHSIM; eauto. i. destruct fuel1; ss. *)
-    (*     { astart t. *)
-    (*       match goal with *)
-    (*       | |- ?P0 (_, ?itr1) _ => *)
-    (*         match (type of x1) with *)
-    (*         | ?P1 (_, ?itr0) _ => *)
-    (*           replace itr1 with itr0 *)
-    (*         end *)
-    (*       end; auto. *)
-    (*       grind. destruct x0, x2. destruct u, u0. grind. *)
-    (*     } *)
-    (*     { astop. steps. } *)
-    (*   } *)
-    (* } *)
-    (* { des. steps. rewrite unfold_APC. steps. *)
-    (*   force_l. exists false. steps. *)
-    (*   force_l. exists fuel1. steps. *)
-    (*   force_l; [eauto|..]. steps. *)
-    (*   force_l. exists (fn, arg_src). steps. *)
-    (*   rewrite SPEC. steps. *)
-    (*   eapply current_iPropL_convert in PRE. mDesAll. *)
-    (*   destruct fsp. ss. unfold inv_with in PRE. mDesAll. *)
-    (*   hcall _ _ with "A A1". *)
-    (*   { iModIntro. iSplitL "A1"; eauto. } *)
-    (*   { splits; ss. } *)
-    (*   { steps. gbase. hexploit CIH. *)
-    (*     { eapply SIM. eapply current_iProp_entail; [eauto|]. *)
-    (*       start_ipm_proof. iSplitR "POST". *)
-    (*       { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. } *)
-    (*       { iApply "POST". } *)
-    (*     } *)
-    (*     i. ss; eauto. *)
-    (*   } *)
-    (* } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. gbase. hexploit CIH; eauto. } *)
-    (*   { gbase. hexploit CIH; eauto. } *)
-    (* } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. exploit IHSIM; eauto. } *)
-    (*   { exploit IHSIM; eauto. } *)
-    (* } *)
-    (* { steps. exploit IHSIM; eauto. } *)
-    (* { des. exploit IH; eauto. i. destruct fuel; steps. *)
-    (*   { astop. steps. force_l. eexists. steps. eauto. } *)
-    (*   { force_l. eexists. steps. eauto. } *)
-    (* } *)
-    (* { steps. exploit SIM; eauto. i. des. eauto. } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. exploit SIM; eauto. i. des. eauto. } *)
-    (*   { exploit SIM; eauto. i. des. eauto. } *)
-    (* } *)
-    (* { des. exploit IH; eauto. i. force_r. eexists. eauto. } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. exploit IHSIM; eauto. } *)
-    (*   { exploit IHSIM; eauto. } *)
-    (* } *)
-    (* { steps. exploit IHSIM; eauto. } *)
-    (* { destruct fuel; steps. *)
-    (*   { astop. steps. exploit IHSIM; eauto. } *)
-    (*   { exploit IHSIM; eauto. } *)
-    (* } *)
-    (* { steps. exploit IHSIM; eauto. } *)
-    (* { deflag. gbase. eapply CIH; eauto. } *)
-    admit "".
+    ginit. gcofix CIH. i.
+    remember (st_src, itr_src). remember (st_tgt, itr_tgt).
+    revert st_src st_tgt itr_src itr_tgt Heqp Heqp0 CIH.
+    induction SIM using hsim_ind; i; clarify.
+    { eapply current_iPropL_convert in RET. mDesAll. destruct fuel; steps.
+      { astop. steps. unfold inv_with in RET. mDesAll. hret _; eauto.
+        iModIntro. iSplitL "H"; auto.
+      }
+      { unfold inv_with in RET. mDesAll. hret _; eauto.
+        iModIntro. iSplitL "H"; auto. }
+    }
+    { eapply current_iPropL_convert in PRE. mDesAll. destruct fuel; steps.
+      { astop. steps. rewrite SPEC. steps. destruct fsp. ss.
+        unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1".
+        { iModIntro. iSplitL "A1"; eauto. }
+        { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. }
+        { steps. gbase. hexploit CIH.
+          { eapply POST. eapply current_iProp_entail; [eauto|].
+            start_ipm_proof. iSplitR "POST".
+            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+            { iApply "POST". }
+          }
+          i. ss; eauto.
+        }
+      }
+      { rewrite SPEC. steps. destruct fsp. ss.
+        unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1".
+        { iModIntro. iSplitL "A1"; eauto. }
+        { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. }
+        { steps. gbase. hexploit CIH.
+          { eapply POST. eapply current_iProp_entail; [eauto|].
+            start_ipm_proof. iSplitR "POST".
+            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+            { iApply "POST". }
+          }
+          i. ss; eauto.
+        }
+      }
+    }
+    { destruct fuel; steps.
+      { astop. steps. exploit IHSIM; eauto. i. destruct fuel1; ss.
+        { astart t0.
+          match goal with
+          | |- ?P0 (_, ?itr1) _ =>
+            match (type of x1) with
+            | ?P1 (_, ?itr0) _ =>
+              replace itr1 with itr0
+            end
+          end; auto.
+          grind. destruct x0, x2. destruct u, u0. grind.
+        }
+        { astop. steps. }
+      }
+      { exploit IHSIM; eauto. i. destruct fuel1; ss.
+        { astart t.
+          match goal with
+          | |- ?P0 (_, ?itr1) _ =>
+            match (type of x1) with
+            | ?P1 (_, ?itr0) _ =>
+              replace itr1 with itr0
+            end
+          end; auto.
+          grind. destruct x0, x2. destruct u, u0. grind.
+        }
+        { astop. steps. }
+      }
+    }
+    { des. steps. rewrite unfold_APC. steps.
+      force_l. exists false. steps.
+      force_l. exists fuel1. steps.
+      force_l; [eauto|..]. steps.
+      force_l. exists (fn, arg_src). steps.
+      rewrite SPEC. steps.
+      eapply current_iPropL_convert in PRE. mDesAll.
+      destruct fsp. ss. unfold inv_with in PRE. mDesAll.
+      hcall _ _ with "A A1".
+      { iModIntro. iSplitL "A1"; eauto. }
+      { splits; ss. }
+      { steps. gbase. hexploit CIH.
+        { eapply SIM. eapply current_iProp_entail; [eauto|].
+          start_ipm_proof. iSplitR "POST".
+          { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+          { iApply "POST". }
+        }
+        i. ss; eauto.
+      }
+    }
+    { destruct fuel; steps.
+      { astop. steps. gbase. hexploit CIH; eauto. }
+      { gbase. hexploit CIH; eauto. }
+    }
+    { destruct fuel; steps.
+      { astop. steps. exploit IHSIM; eauto. }
+      { exploit IHSIM; eauto. }
+    }
+    { steps. exploit IHSIM; eauto. }
+    { des. exploit IH; eauto. i. destruct fuel; steps.
+      { astop. steps. force_l. eexists. steps. eauto. }
+      { force_l. eexists. steps. eauto. }
+    }
+    { steps. exploit SIM; eauto. i. des. eauto. }
+    { destruct fuel; steps.
+      { astop. steps. exploit SIM; eauto. i. des. eauto. }
+      { exploit SIM; eauto. i. des. eauto. }
+    }
+    { des. exploit IH; eauto. i. force_r. eexists. eauto. }
+    { destruct fuel; steps.
+      { astop. steps. exploit IHSIM; eauto. }
+      { exploit IHSIM; eauto. }
+    }
+    { steps. exploit IHSIM; eauto. }
+    { destruct fuel; steps.
+      { astop. steps. exploit IHSIM; eauto. }
+      { exploit IHSIM; eauto. }
+    }
+    { steps. exploit IHSIM; eauto. }
+    { deflag. gbase. eapply CIH; eauto. }
   Qed.
 
   Lemma hsim_adequacy `{PreOrder _ le}:
@@ -835,13 +833,12 @@ Section SIM.
       mr_src mr_tgt fr_src fr_tgt X_src (x_src: X_src) X_tgt (x_tgt: X_tgt) Q_src Q_tgt mn_caller w0
       (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
                     (Q_tgt mn_caller x_tgt ret_tgt ret_tgt) -*
-                    Own mr_tgt ** Own fr_tgt ** (inv_with w0 st_src st_tgt) **
-                    (Q_src mn_caller x_src ret_src ret_tgt))
+                    (inv_with w0 st_src st_tgt) ** (Q_src mn_caller x_src ret_src ret_tgt))
                  (fr_src ⋅ mr_src) None f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt)),
       paco8 (_sim_itree (mk_wf2 I) le) bot8 Any.t Any.t (lift_rel (mk_wf2 I) le w0 (@eq Any.t))
             f_src f_tgt w0
-            (Any.pair st_src mr_src↑,
-             (interp_hCallE_tgt mn stb_src o (interp_hEs_tgt itr_src) fr_src) >>=
+            (Any.pair st_src (mr_src ⋅ mr_tgt)↑,
+             (interp_hCallE_tgt mn stb_src o (interp_hEs_tgt itr_src) (fr_src ⋅ fr_tgt)) >>=
              (HoareFunRet Q_src mn_caller x_src))
             (Any.pair st_tgt mr_tgt↑,
              (interp_hCallE_tgt mn stb_tgt o (interp_hEs_tgt itr_tgt) fr_tgt) >>=
