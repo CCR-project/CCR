@@ -193,7 +193,7 @@ Section SIMMODSEM.
       { iCombine "A2" "A" as "A". iApply (OwnM_Upd with "A").
         instantiate (1:= knot_full (Some x) ⋅ knot_frag (Some x)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
-        destruct ctx0; ss; clarify. }
+        destruct ctx; ss; clarify. }
       mUpd "A1". mDesOwn "A1". steps.
 
       (* ret *)

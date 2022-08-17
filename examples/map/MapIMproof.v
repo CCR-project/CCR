@@ -247,7 +247,7 @@ Section SIMMODSEM.
       { rewrite Z.sub_diag. ss. }
       mAssert (OwnM ((a, 0%Z) |-> (repeat (Vint 0) (x - x) ++ repeat Vundef x))) with "A1".
       { rewrite Nat.sub_diag. ss. }
-      revert ctx1 ACC mr_src1.
+      revert fr1 mr_src1 ACC.
       cut (x <= x).
       2:{ lia. }
       generalize x at 1 4 5 7 13. intros n. induction n; i.
