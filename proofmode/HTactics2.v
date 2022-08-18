@@ -105,6 +105,7 @@ Section MODE.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; et.
     ired_both.
 
+    (*** you don't know fr_src = fr_tgt ⋅ fr_src', you only know the former is updatable to the latter ***)
     (* exploit SIM; et. *)
     (* { admit "". } *)
     (* i; et. *)
@@ -130,21 +131,34 @@ Section MODE.
     (* } *)
     (* Unshelve. all: try exact 0. *)
   Abort.
-  Reset mk_wf.
+  (* Reset mk_wf. *)
 
-  Variant mk_wf (A: Type)
-          (R: A -> Any.t -> Any.t -> iProp)
-    : A -> Any.t * Any.t -> Prop :=
-  | mk_wf_intro
-      a
-      mr_src mr_tgt mp_src mp_tgt
-      (RSRC: URA.wf mr_src -> (R a mp_src mp_tgt ** OwnT mr_tgt) mr_src)
+  (* Variant mk_wf (A: Type) *)
+  (*         (R: A -> Any.t -> Any.t -> iProp) *)
+  (*   : A -> Any.t * Any.t -> Prop := *)
+  (* | mk_wf_intro *)
+  (*     a *)
+  (*     mr_src mr_tgt mp_src mp_tgt *)
+  (*     (RSRC: URA.wf mr_src -> (R a mp_src mp_tgt ** OwnT mr_tgt) mr_src) *)
+  (*   : *)
+  (*     mk_wf R a ((Any.pair mp_src mr_src↑), (Any.pair mp_tgt mr_tgt↑)) *)
+  (* . *)
+
+  Lemma current_iPropL_init
+        (res: Σ) Rn
+        (WF: URA.wf res)
     :
-      mk_wf R a ((Any.pair mp_src mr_src↑), (Any.pair mp_tgt mr_tgt↑))
+    current_iPropL res [(Rn, Own res)]
   .
+  Proof.
+    econs; et; cycle 1.
+    { refl. }
+    eapply to_semantic; et.
+    eapply iPropL_init.
+  Qed.
 
-  Lemma harg_clo_both
-        A Rn
+  Lemma harg_clo2
+        A
         mn r rg
         X (P_src P_tgt: option mname -> X -> Any.t -> Any.t -> iProp) arg_tgt
         mp_src mp_tgt (mr_src mr_tgt: Σ) k_src k_tgt
@@ -155,12 +169,12 @@ Section MODE.
         m n
         (ARG: forall arg_src x_src, exists x_tgt FR,
             <<SEP: bi_entails (R a mp_src mp_tgt ** P_src mn x_src arg_src arg_tgt)
-                              (bupd (OwnT mr_tgt ** P_tgt mn x_tgt arg_tgt arg_tgt ** FR))>>
+                              (bupd (P_tgt mn x_tgt arg_tgt arg_tgt ** FR))>>
                    /\
-            <<SIM: forall fr_src fr_tgt
-                  (ACC: current_iPropL (fr_src ⋅ mr_src) [(Rn, FR); ("TM", OwnT mr_tgt); ("TF", OwnT fr_tgt)]),
-                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr true n a
-                       (Any.pair mp_src mr_src↑, k_src (fr_src, ((mn, x_src), arg_src)))
+            <<SIM: forall mr_src' fr_src fr_tgt
+                  (ACC: current_iPropL (fr_src ⋅ mr_src') [("FR", FR); ("TF", OwnT fr_tgt)]),
+                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr true true a
+                       (Any.pair mp_src (mr_tgt ⋅ mr_src')↑, k_src (fr_src, ((mn, x_src), arg_src)))
                        (Any.pair mp_tgt mr_tgt↑, k_tgt (fr_tgt, ((mn, x_tgt), arg_tgt)))>>)
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
@@ -179,19 +193,164 @@ Section MODE.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists x_tgt.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists arg_tgt.
     uipropall. exploit RSRC; et.
-    { eapply URA.wf_mon. instantiate (1:=fr_src). r_wf VALID. }
-    i; des. subst. rename a0 into mr_src. rename b into mr_tgt'.
-    specialize (SEP (fr_src ⋅ mr_src)). exploit SEP; et.
-    { eapply URA.wf_mon. instantiate (1:=mr_tgt'). r_wf VALID. }
+    { eapply URA.wf_mon. instantiate (1:=fr_src ⋅ mr_tgt). r_wf VALID. }
+    i; des.
+    specialize (SEP (fr_src ⋅ mr_src')). exploit SEP; et.
+    { eapply URA.wf_mon. instantiate (1:=mr_tgt). r_wf VALID. }
     { esplits; try eassumption; try refl; revgoals. r_solve. }
-    i; des. subst. rename b into fr_src'. rename b0 into fr_tgt. rename a1 into mr_tgt''.
+    i; des. subst. rename b into fr_src'. rename a0 into fr_tgt.
     (* rr in x4. des. subst. rename ctx into mr_tgt_spur. *)
     repeat (ired_both; apply sim_itreeC_spec; econs). exists fr_tgt.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits.
-    { eapply URA.updatable_wf; et. etrans; et. eapply URA.extends_updatable.
-      exists (mr_tgt_spur ⋅ fr_src'). r_solve. }
+    { eapply URA.updatable_wf; et.
+      replace (fr_src ⋅ (mr_tgt ⋅ mr_src')) with ((fr_src ⋅ mr_src') ⋅ mr_tgt) by r_solve.
+      eapply URA.updatable_add; et; try refl.
+      etrans; et. eapply URA.extends_updatable.
+      exists (fr_src'). r_solve. }
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; et.
     ired_both.
+    eapply SIM.
+    unshelve eassert(T:=@current_iPropL_init (fr_src ⋅ mr_src') "N" _).
+    { eapply URA.wf_mon. instantiate (1:=mr_tgt). r_wf VALID. }
+    mAssert (#=> (FR ** OwnT fr_tgt)) with "N".
+    { iDestruct (Own_Upd with "N") as "T".
+      { r; et. }
+      iMod "T". iDestruct "T" as "[A B]". iFrame.
+      iStopProof. eapply from_semantic; et.
+    }
+    mUpd "A". mDes. mRename "A1" into "TF". mRename "A" into "FR". ss.
+  Qed.
+
+  Lemma hcall_clo2
+        (fsp_src: fspec)
+        (x_src: shelve__ fsp_src.(meta))
+
+        A (a0: shelve__ A) FR
+
+        (le: A -> A -> Prop) mn r rg a n m mr_src0 mp_src0
+        (fsp_tgt: fspec)
+        mr_tgt0 mp_tgt0 k_tgt k_src
+        fn tbr ord_cur arg_src arg_tgt
+        (R: A -> Any.t -> Any.t -> iProp)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
+
+        fr_src0 fr_tgt0 I
+        (ACC: current_iProp (fr_src0 ⋅ mr_src0) I)
+
+        (UPDATABLE: forall x_tgt,
+           bi_entails I (OwnT (fr_tgt0) **
+                              (fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt
+                                 ==∗ (FR ** R a0 mp_src0 mp_tgt0 **
+                                         (fsp_src.(precond) (Some mn) x_src arg_src arg_tgt: iProp)))))
+
+        (PURE: ord_lt (fsp_src.(measure) x_src) ord_cur /\
+               (tbr = true -> is_pure (fsp_src.(measure) x_src)) /\
+                 (tbr = false -> (fsp_src.(measure) x_src) = ord_top))
+
+        (POST: forall (ret_tgt: Any.t) (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (ret_src: Any.t)
+                      (WLE: le a0 a1)
+                      fr_src1 fr_tgt1 x_tgt J
+                      (UPDATABLE: bi_entails (FR ** OwnT fr_tgt1 ** R a1 mp_src1 mp_tgt1 **
+                                              fsp_src.(postcond) (Some mn) x_src ret_src ret_tgt)
+                                             (fsp_tgt.(postcond) (Some mn) x_tgt ret_src ret_tgt ** J))
+                      (ACC: current_iProp (fr_src1 ⋅ mr_src1) J)
+          ,
+                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr true true a
+                       (Any.pair mp_src1 (mr_src1 ⋅ mr_tgt1)↑, k_src (fr_src1, ret_src))
+                       (Any.pair mp_tgt1 mr_tgt1↑, k_tgt (fr_tgt1, ret_tgt)))
+    :
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
+             (Any.pair mp_src0 (mr_tgt0 ⋅ mr_src0)↑,
+                       (HoareCall mn tbr ord_cur fsp_src fn arg_src) fr_src0 >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑,
+                       (HoareCall mn tbr ord_cur fsp_tgt fn arg_tgt) fr_tgt0 >>= k_tgt)
+  .
+  Proof.
+    subst. unfold HoareCall at 2, mput, mget, assume, guarantee.
+    steps.
+    rename c into mr_tgt1. rename c0 into ro_tgt. rename c1 into fr_tgt.
+    rename x0 into x_tgt. specialize (UPDATABLE x_tgt).
+    eapply current_iProp_entail in ACC; et.
+    assert (exists mr_src1 ro_src fr_src,
+               (<<UPDATABLE: URA.wf (mr_tgt1 ⋅ mr_src1 ⋅ ro_src ⋅ fr_src1)>>) /\
+               (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src1>>) /\
+               (<<FRS: FR fr_src>>) /\
+               (<<PRE: fsp_src.(precond) (Some mn) x_src varg_src varg_tgt ro_src>>) ∧
+           ).
+    { clear - ACC UPDATABLE x x0 x2 x3.
+      eapply current_iPropL_pop in ACC; des.
+      eapply current_iPropL_pop in TL; des.
+      eapply current_iPropL_nil in TL0. ss.
+      specialize (UPDATABLE x0).
+      rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
+      uipropall. exploit UPDATABLE; swap 1 2.
+      { esplits; et.
+        { rr in HD1. uipropall. eapply HD1; [|refl].
+          eapply wf_extends; try apply x.
+          exists (ro_tgt ⋅ fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve.
+        }
+        { rr. uipropall. }
+      }
+      { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). instantiate (1:=ε). r_solve. }
+      { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
+      i; des. clarify.
+      rr in x8. uipropall. des; ss.
+      esplits; et.
+      { eapply wf_extends; et. r. exists b. r_solve. }
+    }
+
+    unfold HoareCall at 1, mput, mget, assume, guarantee.
+    repeat (ired_both; apply sim_itreeC_spec; econs). eexists (_, _, _).
+    intro x_src.
+    ired_both. apply sim_itreeC_spec. econs.
+    hexploit (WEAKER x). i. des.
+    assert (exists mr_src0' rarg_src fr_src0',
+               (<<UPDATABLE: URA.updatable (fr0 ⋅ mr_src0) (mr_src0' ⋅ (rarg_src ⋅ fr_src0'))>>) /\
+               (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src0'>>) /\
+               (<<FRS: FR fr_src0'>>) /\
+               (<<PRE: fsp0.(precond) (Some mn) x_tgt varg_src varg_tgt rarg_src>>)).
+    { inv ACC. uipropall.
+      hexploit UPDATABLE; try apply IPROP.
+      { eapply URA.updatable_wf; et. }
+      i. des. subst.
+      hexploit PRE; et. i. uipropall.
+      hexploit (H b); et.
+      { eapply URA.updatable_wf; et. etrans; et. etrans; et. eapply URA.extends_updatable.
+        exists (a2 ⋅ b0). r_solve. }
+      i; des.
+      esplits; et.
+      etrans; et. etrans; et.
+      replace (b0 ⋅ (r1 ⋅ a2)) with (b0 ⋅ a2 ⋅ r1) by r_solve.
+      eapply URA.updatable_add; et. rewrite URA.add_comm; ss.
+    }
+    des. exists (rarg_src, fr_src0', mr_src0').
+    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits.
+    { replace (rarg_src ⋅ fr_src0' ⋅ mr_src0') with (mr_src0' ⋅ (rarg_src ⋅ fr_src0')) by r_solve. ss. }
+    repeat (ired_both; apply sim_itreeC_spec; econs). exists x_tgt.
+    repeat (ired_both; apply sim_itreeC_spec; econs). exists varg_tgt.
+    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
+    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
+    { r in MEASURE. des_ifs; ss; des_ifs. eapply Ord.le_lt_lt; et. }
+    { i. spc PURE0. r in MEASURE. des_ifs; ss; des_ifs. }
+    { i. spc PURE1. r in MEASURE. des_ifs; ss; des_ifs. }
+    repeat (ired_both; apply sim_itreeC_spec; econs).
+    { econs; eauto. }
+    i. repeat (ired_both; apply sim_itreeC_spec; econs). i.
+    repeat (ired_both; apply sim_itreeC_spec; econs). inv WF.
+    repeat (ired_both; apply sim_itreeC_spec; econs). i.
+    repeat (ired_both; apply sim_itreeC_spec; econs). i.
+    repeat (ired_both; apply sim_itreeC_spec; econs). i.
+    ired_both. eapply POST; eauto. hexploit POST0. i.
+    uipropall. hexploit (H x0).
+    { eapply URA.wf_extends; et. exists (fr_src0' ⋅ mr_src). r_solve. }
+    { eassumption. }
+    i; des. econs.
+    { cbn. esplits; et. eapply RSRC0; et. eapply URA.wf_extends; et. exists (fr_src0' ⋅ x0). r_solve. }
+    { ss. }
+    replace (fr_src0' ⋅ mr_src ⋅ r1) with (r1 ⋅ fr_src0' ⋅ mr_src) by r_solve.
+    rewrite <- ! URA.add_assoc.
+    eapply URA.updatable_add; et. refl.
   Qed.
 
   Lemma harg_clo
