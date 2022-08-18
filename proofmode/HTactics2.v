@@ -198,23 +198,23 @@ Section MODE.
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
-        fr_src0 fr_tgt0 I
-        (ACC: current_iPropL (fr_src0 ⋅ mr_src0 ⋅ mr_tgt0) [("I", I)])
+        fr_src0 fr_tgt0
 
         (PURE: ord_lt (fsp_src.(measure) x_src) ord_cur /\
                (tbr = true -> is_pure (fsp_src.(measure) x_src)) /\
                  (tbr = false -> (fsp_src.(measure) x_src) = ord_top))
 
-        (POST: forall x_tgt,
+        (POST: forall x_tgt, exists I,
+            (<<ACC: current_iPropL (fr_src0 ⋅ mr_src0 ⋅ mr_tgt0) [("I", I)] >>) /\
             (<<UPDATABLE: bi_entails I (OwnT (fr_tgt0) ** OwnT (mr_tgt0) **
                               (fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt
                                  ==∗ (FR ** R a0 mp_src0 mp_tgt0 **
                                          (fsp_src.(precond) (Some mn) x_src arg_src arg_tgt: iProp))))>>) /\
-            (<<POST: forall (ret_src ret_tgt: Any.t) (mp_src1 mp_tgt1 : Any.t) a1 (WLE: le a0 a1) x_tgt,
+            (<<POST: forall (ret_src ret_tgt: Any.t) (mp_src1 mp_tgt1 : Any.t),
             exists J,
-              (<<UPDATABLE: bi_entails (FR ** R a1 mp_src1 mp_tgt1 **
+              (<<UPDATABLE: bi_entails (FR ** (∃ a1, R a1 mp_src1 mp_tgt1 ** ⌜le a0 a1⌝) **
                                           fsp_src.(postcond) (Some mn) x_src ret_src ret_tgt)
-                                      (fsp_tgt.(postcond) (Some mn) x_tgt ret_src ret_tgt ** J)>>) /\
+                                      (fsp_tgt.(postcond) (Some mn) x_tgt ret_tgt ret_tgt ** J)>>) /\
                 (<<SIM: forall fr_src1 fr_tgt1 mr_src1 mr_tgt1
                               (ACC: current_iPropL (fr_src1 ⋅ (mr_tgt1 ⋅ mr_src1))
                                                    [("J", J); ("TF", OwnT fr_tgt1); ("TM", OwnT mr_tgt1)]),
@@ -274,8 +274,8 @@ Section MODE.
     i. steps. rename x5 into ri_src. rename t into mp_src2. rename c into mr_src2.
     rename x7 into ret_src. rename vret into ret_tgt.
     inv WF. rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast in *. clarify.
-    move POST0 at bottom.
-    specialize (POST0 ret_src ret_tgt mp_src2 mp_tgt w1 WLE x_tgt). des.
+    move POST at bottom.
+    specialize (POST ret_src ret_tgt mp_src2 mp_tgt). des.
     assert(T: URA.wf (ri_src ⋅ fr_src ⋅ mr_src')).
     { eapply URA.wf_mon; et. instantiate (1:= fr_tgt ⋅ mr_tgt). r_wf x6. }
     assert(ACC:=current_iPropL_init "A" T).
@@ -291,7 +291,7 @@ Section MODE.
       instantiate (1:=ri_src ⋅ fr_src ⋅ fr_tgt ⋅ mr_tgt). r_wf x6.
     }
     eapply current_iProp_entail in ACC; cycle 1.
-    { etrans; try eassumption. iIntros "H". iDestruct "H" as "[A [B [C _]]]". iFrame. }
+    { etrans; try eassumption. iIntros "H". iDestruct "H" as "[A [B [C _]]]". iFrame. iSplits; et. }
     inv ACC. rr in IPROP. repeat (autorewrite with iprop in IPROP; autounfold with iprop in IPROP; ss).
     des. subst.
     rename a1 into ri_tgt. rename b into jr.
@@ -307,7 +307,7 @@ Section MODE.
     steps.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists ret_tgt.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; et.
-    { admit "simple". }
+    (* { admit "simple". } *)
     steps.
     eapply SIM.
     econs; et; cycle 1.
