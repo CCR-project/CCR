@@ -284,7 +284,7 @@ Section SIM.
         (SPEC: fn_has_spec fn arg_src arg_tgt pre post false)
     :
       bi_entails
-        ((inv_with le I w0 st_src st_tgt)
+        ((I w0 st_src st_tgt)
            ** (pre: iProp)
            ** (∀ st_src st_tgt ret_src ret_tgt,
                   {{"INV": inv_with le I w0 st_src st_tgt}} -* {{"POST": (post ret_src ret_tgt: iProp)}} -* isim (g, g, true, true) Q None (st_src, ktr_src ret_src) (st_tgt, ktr_tgt ret_tgt)))
@@ -298,7 +298,7 @@ Section SIM.
     end.
     { econs; eauto. }
     apply current_iPropL_convert in CUR. mDesAll.
-    ired_both. gstep. inv SPEC. econs; eauto.
+    ired_both. gstep. inv SPEC. unfold inv_with in CUR. mDesAll. econs; eauto.
     { mAssert _ with "A1".
       { iApply (PRE with "A1"). }
       mUpd "A2".
@@ -334,7 +334,7 @@ Section SIM.
         (FUEL: Ord.lt fuel1 fuel0)
     :
       bi_entails
-        (inv_with le I w0 st_src st_tgt
+        (I w0 st_src st_tgt
                   ** (pre: iProp)
                   **
                   (∀ st_src st_tgt ret_src ret_tgt,
@@ -492,7 +492,7 @@ Section SIM.
         (SPEC: fn_has_spec fn arg_src arg_tgt pre post false)
     :
       bi_entails
-        ((inv_with le I w0 st_src st_tgt)
+        ((I w0 st_src st_tgt)
            ** (pre: iProp)
            **
            (∀ st_src st_tgt ret_src ret_tgt,
@@ -514,7 +514,7 @@ Section SIM.
         (SPEC: fn_has_spec fn arg_src arg_tgt pre post true)
     :
       bi_entails
-        ((inv_with le I w0 st_src st_tgt)
+        ((I w0 st_src st_tgt)
            ** (pre: iProp)
            **
            (∀ st_src st_tgt ret_src ret_tgt,
@@ -1115,7 +1115,7 @@ Section SIM.
         (FUEL: Ord.lt fuel1 fuel0)
     :
       bi_entails
-        (inv_with le I w0 st_src st_tgt
+        (I w0 st_src st_tgt
                   ** (pre: iProp)
                   **
                   (∀ st_src st_tgt ret_src ret_tgt,
@@ -1504,7 +1504,7 @@ Section TRIVIAL.
     iExists (1: Ord.t). iApply isim_call_pure_trigger.
     { eauto. }
     iSplitL "PRE".
-    { iSplitR "PRE"; [|auto]. iApply inv_with_current.
+    { iSplitR "PRE"; [|auto].
       unfold world_wf_trivial. iPureIntro. auto.
     }
     { iIntros (? ? ? ?) "INV PRE".
@@ -1534,8 +1534,7 @@ Section TRIVIAL.
     { eauto. }
     { oauto. }
     iSplitL "PRE".
-    { iSplitR "PRE"; auto. iApply inv_with_current.
-      unfold world_wf_trivial. auto.
+    { iSplitR "PRE"; auto.
     }
     iIntros (? ? ? ?) "[INV H]".
     iPoseProof ("POST" with "H") as (ret_tgt') "[% POST]".
