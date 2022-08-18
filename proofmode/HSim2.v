@@ -769,9 +769,10 @@ Section SIM.
         { ii. rr. esplits; et. }
       }
     }
-    { eapply current_iPropL_convert in PRE. mDesAll. destruct fuel; steps.
+    { destruct fuel; steps.
       { astop. steps. rewrite SPEC. steps. eapply hcall_clo2.
-        { replace (fr_src ⋅ mr_src ⋅ mr_tgt) with (fr_src ⋅ (mr_tgt ⋅ mr_src)) by r_solve. eauto. }
+        { eapply current_iPropL_convert in PRE.
+          replace (fr_src ⋅ mr_src ⋅ mr_tgt) with (fr_src ⋅ (mr_tgt ⋅ mr_src)) by r_solve. eauto. }
         { i. iIntros "H". iSplitR.
           - admit "??".
           - iIntros "A". iSpecialize ("H" with "A"). iDestruct ("H" with "A") as "A". eauto.
