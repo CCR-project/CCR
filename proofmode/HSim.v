@@ -139,7 +139,7 @@ Section SIM.
       st_src0 st_tgt0 ktr_src ktr_tgt
       fuel f_src f_tgt
       (SPEC: stb fn = Some fsp)
-      (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+      (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
       (MEASURE: o = ord_top)
       (NPURE: fsp.(measure) x = ord_top)
       (POST: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt
@@ -160,7 +160,7 @@ Section SIM.
       st_src0 st_tgt0 itr_src ktr_tgt
       fuel0 f_src f_tgt
       (SPEC: stb fn = Some fsp)
-      (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+      (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
       (MEASURE: ord_lt (fsp.(measure) x) o)
       (PURE: is_pure (fsp.(measure) x))
       (POST: exists fuel1,
@@ -271,7 +271,7 @@ Section SIM.
             st_src0 st_tgt0 ktr_src ktr_tgt
             fuel f_src f_tgt
             (SPEC: stb fn = Some fsp)
-            (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+            (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
             (MEASURE: o = ord_top)
             (NPURE: fsp.(measure) x = ord_top)
             (POST: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt
@@ -291,7 +291,7 @@ Section SIM.
             st_src0 st_tgt0 itr_src ktr_tgt
             fuel0 f_src f_tgt
             (SPEC: stb fn = Some fsp)
-            (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+            (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
             (MEASURE: ord_lt (fsp.(measure) x) o)
             (PURE: is_pure (fsp.(measure) x))
             (POST: exists fuel1,
@@ -439,7 +439,7 @@ Section SIM.
             st_src0 st_tgt0 ktr_src ktr_tgt
             fuel f_src f_tgt
             (SPEC: stb fn = Some fsp)
-            (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+            (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
             (MEASURE: o = ord_top)
             (NPURE: fsp.(measure) x = ord_top)
             (POST: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt
@@ -459,7 +459,7 @@ Section SIM.
             st_src0 st_tgt0 itr_src ktr_tgt
             fuel0 f_src f_tgt
             (SPEC: stb fn = Some fsp)
-            (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+            (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
             (MEASURE: ord_lt (fsp.(measure) x) o)
             (PURE: is_pure (fsp.(measure) x))
             (POST: exists fuel1,
@@ -619,7 +619,7 @@ Section SIM.
         { steps. gbase. hexploit CIH.
           { eapply POST. eapply current_iProp_entail; [eauto|].
             start_ipm_proof. iSplitR "POST".
-            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. }
             { iApply "POST". }
           }
           i. ss; eauto.
@@ -632,7 +632,7 @@ Section SIM.
         { steps. gbase. hexploit CIH.
           { eapply POST. eapply current_iProp_entail; [eauto|].
             start_ipm_proof. iSplitR "POST".
-            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+            { iSplitL "H"; eauto. iExists a1. iSplit; eauto. }
             { iApply "POST". }
           }
           i. ss; eauto.
@@ -681,7 +681,7 @@ Section SIM.
       { steps. gbase. hexploit CIH.
         { eapply SIM. eapply current_iProp_entail; [eauto|].
           start_ipm_proof. iSplitR "POST".
-          { iSplitL "H"; eauto. iExists a1. iSplit; eauto. iPureIntro. etrans; eauto. }
+          { iSplitL "H"; eauto. iExists a1. iSplit; eauto. }
           { iApply "POST". }
         }
         i. ss; eauto.
@@ -910,7 +910,7 @@ Section SIM.
       st_src0 st_tgt0 ktr_src ktr_tgt
       fuel f_src f_tgt
       (SPEC: stb fn = Some fsp)
-      (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+      (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
       (MEASURE: o = ord_top)
       (NPURE: fsp.(measure) x = ord_top)
       (POST: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt
@@ -931,7 +931,7 @@ Section SIM.
       st_src0 st_tgt0 itr_src ktr_tgt
       fuel0 f_src f_tgt
       (SPEC: stb fn = Some fsp)
-      (PRE: current_iProp fmr (FR ** inv_with w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
+      (PRE: current_iProp fmr (FR ** I w0 st_src0 st_tgt0 ** fsp.(precond) (Some mn) x arg_src arg_tgt))
       (MEASURE: ord_lt (fsp.(measure) x) o)
       (PURE: is_pure (fsp.(measure) x))
       (POST: exists fuel1,
