@@ -1446,12 +1446,12 @@ Section SIM.
                                   (OwnT: iProp)
                                   (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                                   (fmr: Σ),
-                           option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                           option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
           (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hbind_rightC_intro
       S_tgt
       (P: Any.t -> Any.t -> S_tgt -> iProp)
@@ -1465,11 +1465,11 @@ Section SIM.
   .
 
   Lemma hbind_rightC_mon:
-    monotone9 hbind_rightC.
+    monotone10 hbind_rightC.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hbind_rightC_mon: paco.
 
-  Lemma hbind_rightC_spec: hbind_rightC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hbind_rightC_spec: hbind_rightC <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
     eapply grespect_uclo.
     econs; eauto with paco. i. inv PR. eapply GF in SIM. remember None in SIM.
@@ -1481,49 +1481,52 @@ Section SIM.
       2:{ instantiate (1:=false). ss. }
       2:{ instantiate (1:=false). ss. }
       2:{ refl. }
-      gstep. eapply _hsim_mon; eauto. i. gbase. eapply rclo9_base. auto.
+      gstep. eapply _hsim_mon; eauto. i. gbase. eapply rclo10_base. auto.
     }
     { apply f_equal with (f:=_observe) in H0. ss. }
     { apply f_equal with (f:=_observe) in H0. ss. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 7; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { eapply hsimC_uclo. econs 8; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { des. eapply hsimC_uclo. econs 11; eauto. }
+    { eapply hsimC_uclo. econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 13; eauto. }
+    { des. eapply hsimC_uclo. econs 12; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 15; eauto. }
-    { gstep. econs 16; eauto. gbase. eapply rclo9_clo_base. left. econs; eauto. }
+    { eapply hsimC_uclo. econs 14; eauto. }
+    { apply f_equal with (f:=_observe) in H0. ss. }
+    { eapply hsimC_uclo. econs 16; eauto. }
+    { gstep. econs 17; eauto. gbase. eapply rclo10_clo_base. left. econs; eauto. }
   Qed.
 
   Variant hsplitC (r: forall R_src R_tgt
+                             (OwnT: iProp)
                              (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                              (fmr: Σ),
-                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hsplitC_intro
       S_tgt
       (P: Any.t -> Any.t -> S_tgt -> iProp)
       fuel0 fuel1 f_src f_tgt st_src0 st_tgt0 itr_src itr_tgt ktr_tgt
-      (SIM: @r unit S_tgt (fun st_src st_tgt _ ret_tgt => P st_src st_tgt ret_tgt) fmr (Some fuel0) f_src f_tgt (st_src0, Ret tt) (st_tgt0, itr_tgt))
-      (SIMK: forall fmr1 st_src1 st_tgt1 ret_tgt
-                    (POST: current_iProp fmr1 (P st_src1 st_tgt1 ret_tgt)),
-          @r R_src R_tgt Q fmr1 (Some fuel1) false false (st_src1, itr_src) (st_tgt1, ktr_tgt ret_tgt))
+      (SIM: @r unit S_tgt OwnT (fun st_src st_tgt _ ret_tgt => P st_src st_tgt ret_tgt) fmr (Some fuel0) f_src f_tgt (st_src0, Ret tt) (st_tgt0, itr_tgt))
+      (SIMK: forall fmr1 st_src1 st_tgt1 ret_tgt OwnT
+                    (POST: current_iProp fmr1 (OwnT ** P st_src1 st_tgt1 ret_tgt)),
+          @r R_src R_tgt OwnT Q fmr1 (Some fuel1) false false (st_src1, itr_src) (st_tgt1, ktr_tgt ret_tgt))
     :
-      hsplitC r Q fmr (Some (fuel1 + fuel0)%ord) f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt >>= ktr_tgt)
+      hsplitC r OwnT Q fmr (Some (fuel1 + fuel0)%ord) f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt >>= ktr_tgt)
   .
 
   Lemma hsplitC_mon:
-    monotone9 hsplitC.
+    monotone10 hsplitC.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hsplitC_mon: paco.
 
-  Lemma hsplitC_spec: hsplitC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hsplitC_spec: hsplitC <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
     eapply grespect_uclo.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
@@ -1535,145 +1538,176 @@ Section SIM.
       2:{ instantiate (1:=false). ss. }
       2:{ instantiate (1:=false). ss. }
       2:{ instantiate (1:=(Some fuel1)). ss. apply OrdArith.add_base_l. }
-      gstep. eapply _hsim_mon; eauto. i. gbase. eapply rclo9_base. auto.
+      gstep. eapply _hsim_mon; eauto. i. gbase. eapply rclo10_base. auto.
     }
     { apply f_equal with (f:=_observe) in H0. ss. }
     { apply f_equal with (f:=_observe) in H0. ss. }
     { des. gstep. econs 4; eauto. esplits; eauto.
       { eapply OrdArith.lt_add_r. eauto. }
-      i. hexploit SIM; eauto. i. gbase. eapply rclo9_clo_base. left. econs; eauto.
+      i. hexploit PRE; eauto. i. des. esplits; eauto. i. exploit POST; eauto. i; des. esplits; eauto.
+      i. gbase. eapply rclo10_clo_base. left. econs; eauto.
     }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 7; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { eapply hsimC_uclo. econs 8; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { des. eapply hsimC_uclo. econs 11; eauto. }
+    { eapply hsimC_uclo. econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 13; eauto. }
+    { des. eapply hsimC_uclo. econs 12; eauto. }
     { apply f_equal with (f:=_observe) in H0. ss. }
-    { eapply hsimC_uclo. econs 15; eauto. }
-    { gstep. econs 16; eauto. gbase. eapply rclo9_clo_base. left. econs; eauto. }
+    { eapply hsimC_uclo. econs 14; eauto. }
+    { apply f_equal with (f:=_observe) in H0. ss. }
+    { eapply hsimC_uclo. econs 16; eauto. }
+    { gstep. econs 17; eauto. gbase. eapply rclo10_clo_base. left. econs; eauto. }
   Qed.
 
   Variant hmonoC (r: forall R_src R_tgt
+                            (OwnT: iProp)
                             (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                             (fmr: Σ),
-                     option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                     option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hmonoC_intro
       f_src f_tgt fuel Q0
       st_src st_tgt
-      (SIM: r _ _ Q0 fmr fuel f_src f_tgt st_src st_tgt)
+      (SIM: r _ _ OwnT Q0 fmr fuel f_src f_tgt st_src st_tgt)
       (MONO: forall st_src st_tgt ret_src ret_tgt,
           (bi_entails (Q0 st_src st_tgt ret_src ret_tgt) (#=> Q st_src st_tgt ret_src ret_tgt)))
     :
-      hmonoC r Q fmr fuel f_src f_tgt st_src st_tgt
+      hmonoC r OwnT Q fmr fuel f_src f_tgt st_src st_tgt
   .
 
   Lemma hmonoC_mon:
-    monotone9 hmonoC.
+    monotone10 hmonoC.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hmonoC_mon: paco.
 
-  Lemma hmonoC_spec: hmonoC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hmonoC_spec: hmonoC <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
-    eapply wrespect9_uclo; eauto with paco.
+    eapply wrespect10_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
     { econs 1; eauto. eapply current_iProp_upd.
       eapply current_iProp_entail; eauto.
+      iIntros "[A B]". iFrame. iStopProof. eauto.
     }
-    { econs 2; eauto. i. eapply rclo9_clo_base. econs; eauto. }
+    { econs 2; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto. i. hexploit POST; eauto.
+      i; des. esplits; eauto. i. eapply rclo10_clo_base. econs; eauto. }
     { econs 3; eauto. }
-    { econs 4; eauto. des. esplits; eauto. i. hexploit SIM; eauto. i. eapply rclo9_clo_base. econs; eauto. }
-    { econs 5; eauto. i. eapply rclo9_clo_base. econs; eauto. }
-    { econs 6; eauto. }
+    { econs 4; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto. i. hexploit POST; eauto.
+      i; des. esplits; eauto. i. eapply rclo10_clo_base. econs; eauto. }
+    { econs 5; eauto. des. esplits; eauto. i. hexploit SIM; eauto. i. eapply rclo10_clo_base. econs; eauto. }
+    { econs 6; eauto. i. eapply rclo10_clo_base. econs; eauto. }
     { econs 7; eauto. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 8; eauto. }
+    { econs 9; eauto. des. esplits; eauto. }
     { econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { econs 11; eauto. des. esplits; eauto. }
-    { econs 12; eauto. }
+    { econs 11; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 12; eauto. des. esplits; eauto. }
     { econs 13; eauto. }
     { econs 14; eauto. }
     { econs 15; eauto. }
-    { econs 16; eauto. eapply rclo9_clo_base. econs; eauto. }
+    { econs 16; eauto. }
+    { econs 17; eauto. eapply rclo10_clo_base. econs; eauto. }
   Qed.
 
   Variant hframeC_aux (r: forall R_src R_tgt
+                             (OwnT: iProp)
                              (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                              (res: Σ),
-                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (res: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hframeC_aux_intro
       res0 frm
       f_src f_tgt fuel
       st_src st_tgt
       (PRE: URA.wf res)
       (UPD: URA.updatable res (res0 ⋅ frm))
-      (SIM: r _ _ (fun st_src st_tgt ret_src ret_tgt => Own frm -* #=> Q st_src st_tgt ret_src ret_tgt)
+      (SIM: r _ _ OwnT (fun st_src st_tgt ret_src ret_tgt => Own frm -* #=> Q st_src st_tgt ret_src ret_tgt)
               res0 fuel f_src f_tgt st_src st_tgt)
     :
-      hframeC_aux r Q res fuel f_src f_tgt st_src st_tgt
+      hframeC_aux r OwnT Q res fuel f_src f_tgt st_src st_tgt
   .
 
   Lemma hframeC_aux_mon:
-    monotone9 hframeC_aux.
+    monotone10 hframeC_aux.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hframeC_aux_mon: paco.
 
-  Lemma hframeC_aux_spec: hframeC_aux <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hframeC_aux_spec: hframeC_aux <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
-    eapply wrespect9_uclo; eauto with paco.
+    eapply wrespect10_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
     { econs 1; eauto. eapply current_iProp_upd. eapply current_iProp_updatable; et.
-      eapply current_iProp_frame_own in RET; eauto. eapply URA.updatable_wf; et. }
-    { econs 2; eauto.
+      eapply current_iProp_frame_own; eauto.
+      { eapply URA.updatable_wf; et. }
+      eapply current_iProp_entail; eauto. iIntros "[A B]". iFrame. eauto.
+    }
+    { econs 2; eauto. i. hexploit PRE0; eauto. i; des. esplits; eauto.
       { eapply current_iProp_updatable; et. eapply current_iProp_frame_own; eauto.
         { eapply URA.updatable_wf; et. }
         eapply current_iProp_entail.
-        { eapply PRE0. }
-        iIntros "[[H0 H1] H2] H3".
-        iSplitR "H2"; [|iExact "H2"].
-        iSplitR "H1"; [|iExact "H1"].
-        instantiate (1:= _ ** _).
-        iSplitL "H0"; [iExact "H0"|].
-        iExact "H3".
+        { eauto. }
+        iIntros "[A B] C". iSplitL "A"; [iAssumption|].
+        iIntros "D". iDestruct ("B" with "D") as "B". iMod "B". iModIntro. iDestruct "B" as "[[A B] D]".
+        iCombine "A C" as "A". iFrame. iAssumption.
       }
-      { i. eapply rclo9_clo_base.
+      { i. exploit POST; eauto. i; des. esplits; eauto.
+        { iIntros "[[[H0 H1] H2] H3]". iDestruct (UPD0 with "[H0 H2 H3]") as "H".
+          { iFrame. }
+          iMod "H". iModIntro. iDestruct "H" as "[A B]". iCombine "H1 B" as "B". iFrame. iAssumption.
+        }
+        i. eapply rclo10_clo_base.
         eapply current_iProp_entail in ACC; cycle 1.
-        { iIntros "[[[H0 H1] H2] H3]". iCombine "H1 H0 H2 H3" as "H". iExact "H". }
+        { iIntros "[H0 [H1 H2]]". iCombine "H0 H2" as "H". instantiate (1:= _ ** _).
+          iSplitL "H1"; iAssumption. }
         eapply current_iProp_frame_own_rev in ACC. des.
         econs; et.
-        { eapply POST; eauto.
-          eapply current_iProp_entail.
-          { eapply ACC1. }
-          iIntros "[H0 [H1 H2]]".
-          iFrame.
-        }
       }
     }
     { econs 3; eauto. }
-    { econs 4; eauto.
+    { econs 4; eauto. i. hexploit PRE0; eauto. i; des. esplits; eauto.
+      { eapply current_iProp_updatable; et. eapply current_iProp_frame_own; eauto.
+        { eapply URA.updatable_wf; et. }
+        eapply current_iProp_entail.
+        { eauto. }
+        iIntros "[A B] C". iSplitL "A"; [iAssumption|].
+        iIntros "D". iDestruct ("B" with "D") as "B". iMod "B". iModIntro. iDestruct "B" as "[[A B] D]".
+        iCombine "A C" as "A". iFrame. iAssumption.
+      }
+      { i. exploit POST; eauto. i; des. esplits; eauto.
+        { iIntros "[[[H0 H1] H2] H3]". iDestruct (UPD0 with "[H0 H2 H3]") as "H".
+          { iFrame. }
+          iMod "H". iModIntro. iDestruct "H" as "[A B]". iCombine "H1 B" as "B". iFrame. iAssumption.
+        }
+        i. eapply rclo10_clo_base.
+        eapply current_iProp_entail in ACC; cycle 1.
+        { iIntros "[H0 [H1 H2]]". iCombine "H1 H0 H2" as "H". iAssumption. }
+        eapply current_iProp_frame_own_rev in ACC. des.
+        econs; et.
+      }
+    }
+    { econs 5; eauto.
       { eapply current_iProp_updatable; et.
         eapply current_iProp_frame_own; et.
         { eapply URA.updatable_wf; et. }
         eapply current_iProp_entail.
         { eapply PRE0. }
-        iIntros "[[H0 H1] H2] H3". iFrame. iCombine "H0 H3" as "H". iAssumption.
+        iIntros "[[H0 H1] H2] H3". iFrame. iCombine "H2 H3" as "H". iAssumption.
       }
       { des. esplits; eauto.
-        i. eapply rclo9_clo_base.
+        i. eapply rclo10_clo_base.
         eapply current_iProp_entail in ACC; cycle 1.
-        { iIntros "[[[H0 H1] H2] H3]". iCombine "H1 H0 H2 H3" as "H". iExact "H". }
+        { iIntros "[[H0 H1] [H2 H3]]". iCombine "H3 H0 H1 H2" as "H". iAssumption. }
         eapply current_iProp_frame_own_rev in ACC. des.
         econs; et.
         { eapply SIM; eauto.
@@ -1684,40 +1718,42 @@ Section SIM.
         }
       }
     }
-    { econs 5; eauto. i. eapply rclo9_clo_base. econs; eauto. }
-    { econs 6; eauto. }
+    { econs 6; eauto. i. eapply rclo10_clo_base. econs; eauto. }
     { econs 7; eauto. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 8; eauto. }
+    { econs 9; eauto. des. esplits; eauto. }
     { econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { econs 11; eauto. des. esplits; eauto. }
-    { econs 12; eauto. }
+    { econs 11; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 12; eauto. des. esplits; eauto. }
     { econs 13; eauto. }
     { econs 14; eauto. }
     { econs 15; eauto. }
-    { econs 16; eauto. eapply rclo9_clo_base. econs; eauto. }
+    { econs 16; eauto. }
+    { econs 17; eauto. eapply rclo10_clo_base. econs; eauto. }
   Qed.
 
   Variant hframeC (r: forall R_src R_tgt
+                             (OwnT: iProp)
                              (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                              (fmr: Σ),
-                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                      option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hframeC_intro
       P0 P1
       f_src f_tgt fuel
       st_src st_tgt
       (PRE: current_iProp fmr (P0 ** P1))
       (SIM: forall fmr (PRE: current_iProp fmr P1),
-          r _ _ (fun st_src st_tgt ret_src ret_tgt => P0 -* #=> Q st_src st_tgt ret_src ret_tgt) fmr fuel f_src f_tgt st_src st_tgt)
+          r _ _ OwnT (fun st_src st_tgt ret_src ret_tgt => P0 -* #=> Q st_src st_tgt ret_src ret_tgt) fmr fuel f_src f_tgt st_src st_tgt)
     :
-      hframeC r Q fmr fuel f_src f_tgt st_src st_tgt
+      hframeC r OwnT Q fmr fuel f_src f_tgt st_src st_tgt
   .
 
-  Lemma hframeC_spec: hframeC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hframeC_spec: hframeC <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
     ii. inv PR.
     inv PRE. rr in IPROP.
@@ -1741,54 +1777,64 @@ Section SIM.
   Qed.
 
   Variant hupdC (r: forall R_src R_tgt
-                            (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-                            (fmr: Σ),
-                     option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
+                           (OwnT: iProp)
+                           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+                           (fmr: Σ),
+                     option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
-    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
+    : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree hEs R_tgt -> Prop :=
   | hupdC_intro
       f_src f_tgt fuel
       st_src st_tgt
       fmr1
       (WF: URA.wf fmr)
       (UPD: URA.updatable fmr fmr1)
-      (SIM: r _ _ Q fmr1 fuel f_src f_tgt st_src st_tgt)
+      (SIM: r _ _ OwnT Q fmr1 fuel f_src f_tgt st_src st_tgt)
     :
-      hupdC r Q fmr fuel f_src f_tgt st_src st_tgt
+      hupdC r OwnT Q fmr fuel f_src f_tgt st_src st_tgt
   .
 
   Lemma hupdC_mon:
-    monotone9 hupdC.
+    monotone10 hupdC.
   Proof. ii. inv IN; econs; et. Qed.
   Hint Resolve hupdC_mon: paco.
 
-  Lemma hupdC_spec: hupdC <10= gupaco9 (_hsim) (cpn9 _hsim).
+  Lemma hupdC_spec: hupdC <11= gupaco10 (_hsim) (cpn10 _hsim).
   Proof.
-    eapply wrespect9_uclo; eauto with paco.
+    eapply wrespect10_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
     { econs 1; eauto. eapply current_iProp_updatable; et. }
-    { econs 2; eauto. { eapply current_iProp_updatable; et. }
-      i. eapply rclo9_clo_base. econs; eauto; try refl. apply ACC.
+    { econs 2; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto.
+      { eapply current_iProp_updatable; et. }
+      i. exploit POST; eauto. i; des. esplits; eauto.
+      i. eapply rclo10_clo_base. econs; eauto; try refl. apply ACC.
     }
     { econs 3; eauto. }
-    { econs 4; eauto. { eapply current_iProp_updatable; et. } des. esplits; eauto. i. hexploit SIM; eauto.
-      i. eapply rclo9_clo_base. econs; eauto; try refl. apply ACC.
+    { econs 4; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto.
+      { eapply current_iProp_updatable; et. }
+      i. exploit POST; eauto. i; des. esplits; eauto.
+      i. eapply rclo10_clo_base. econs; eauto; try refl. apply ACC.
     }
-    { econs 5; eauto. i. eapply rclo9_clo_base. econs; eauto. }
-    { econs 6; eauto. }
+    { econs 5; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto.
+      { eapply current_iProp_updatable; et. }
+      i. eapply rclo10_clo_base. econs; eauto; try refl. apply ACC.
+    }
+    { econs 6; eauto. i. eapply rclo10_clo_base. econs; eauto. }
     { econs 7; eauto. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 8; eauto. }
+    { econs 9; eauto. des. esplits; eauto. }
     { econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { econs 11; eauto. des. esplits; eauto. }
-    { econs 12; eauto. }
+    { econs 11; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 12; eauto. des. esplits; eauto. }
     { econs 13; eauto. }
     { econs 14; eauto. }
     { econs 15; eauto. }
-    { econs 16; eauto. eapply rclo9_clo_base. econs; eauto. }
+    { econs 16; eauto. }
+    { econs 17; eauto. eapply rclo10_clo_base. econs; eauto. }
   Qed.
 End SIM.
 #[export] Hint Resolve _hsim_mon: paco.
