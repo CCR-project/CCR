@@ -1388,10 +1388,10 @@ Section SIM.
   | hbindC_intro
       S_src S_tgt
       (P: Any.t -> Any.t -> S_src -> S_tgt -> iProp)
-      fuel f_src f_tgt st_src0 st_tgt0 itr_src itr_tgt ktr_src ktr_tgt OwnT'
-      (SIM: @r S_src S_tgt OwnT' P fmr fuel f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt))
-      (SIMK: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt
-                    (POST: current_iProp fmr1 (OwnT' ** P st_src1 st_tgt1 ret_src ret_tgt)),
+      fuel f_src f_tgt st_src0 st_tgt0 itr_src itr_tgt ktr_src ktr_tgt
+      (SIM: @r S_src S_tgt OwnT P fmr fuel f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt))
+      (SIMK: forall fmr1 st_src1 st_tgt1 ret_src ret_tgt OwnT
+                    (POST: current_iProp fmr1 (OwnT ** P st_src1 st_tgt1 ret_src ret_tgt)),
           @r R_src R_tgt OwnT Q fmr1 None false false (st_src1, ktr_src ret_src) (st_tgt1, ktr_tgt ret_tgt))
     :
       hbindC r OwnT Q fmr fuel f_src f_tgt (st_src0, itr_src >>= ktr_src) (st_tgt0, itr_tgt >>= ktr_tgt)
@@ -1419,31 +1419,36 @@ Section SIM.
     { gstep. econs 2; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto. i. hexploit POST; eauto. i; des.
       esplits; eauto. i.
       gbase. eapply rclo10_clo_base. left. econs; eauto.
-      i. hexploit SIM; try apply POST0. eauto. i; des.
     }
     { eapply hsimC_uclo. econs 3; eauto. }
-    { des. gstep. econs 4; eauto. esplits; eauto. i.
-      hexploit SIM; eauto. i. gbase. eapply rclo9_clo_base. left. econs; eauto.
+    { gstep. econs 4; eauto. i. hexploit PRE; eauto. i; des. esplits; eauto. i. hexploit POST; eauto. i; des.
+      esplits; eauto. i.
+      gbase. eapply rclo10_clo_base. left. econs; eauto.
     }
-    { gstep. econs 5; eauto. i. gbase. eapply rclo9_clo_base. left. econs; eauto. }
-    { eapply hsimC_uclo. econs 6; eauto. }
+    { des. gstep. econs 5; eauto. esplits; eauto. i.
+      hexploit SIM; eauto. i. gbase. eapply rclo10_clo_base. left. econs; eauto.
+    }
+    { gstep. econs 6; eauto. i. gbase. eapply rclo10_clo_base. left. econs; eauto. }
     { eapply hsimC_uclo. econs 7; eauto. }
-    { des. eapply hsimC_uclo. econs 8; eauto. }
-    { eapply hsimC_uclo. econs 9; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { eapply hsimC_uclo. econs 8; eauto. }
+    { des. eapply hsimC_uclo. econs 9; eauto. }
     { eapply hsimC_uclo. econs 10; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { des. eapply hsimC_uclo. econs 11; eauto. }
-    { eapply hsimC_uclo. econs 12; eauto. }
+    { eapply hsimC_uclo. econs 11; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { des. eapply hsimC_uclo. econs 12; eauto. }
     { eapply hsimC_uclo. econs 13; eauto. }
     { eapply hsimC_uclo. econs 14; eauto. }
     { eapply hsimC_uclo. econs 15; eauto. }
-    { gstep. econs 16; eauto. gbase. eapply rclo9_clo_base. left. econs; eauto. }
+    { eapply hsimC_uclo. econs 16; eauto. }
+    { gstep. econs 17; eauto. gbase. eapply rclo10_clo_base. left. econs; eauto. }
   Qed.
 
   Variant hbind_rightC (r: forall R_src R_tgt
+                                  (OwnT: iProp)
                                   (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
                                   (fmr: Σ),
                            option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop)
           {R_src R_tgt}
+          (OwnT: iProp)
           (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
           (fmr: Σ)
     : option Ord.t -> bool -> bool -> Any.t * itree hEs R_src -> Any.t * itree Es R_tgt -> Prop :=
@@ -1451,12 +1456,12 @@ Section SIM.
       S_tgt
       (P: Any.t -> Any.t -> S_tgt -> iProp)
       fuel f_src f_tgt st_src0 st_tgt0 itr_src itr_tgt ktr_tgt
-      (SIM: @r unit S_tgt (fun st_src st_tgt _ ret_tgt => P st_src st_tgt ret_tgt) fmr None f_src f_tgt (st_src0, Ret tt) (st_tgt0, itr_tgt))
-      (SIMK: forall fmr1 st_src1 st_tgt1 ret_tgt
-                    (POST: current_iProp fmr1 (P st_src1 st_tgt1 ret_tgt)),
-          @r R_src R_tgt Q fmr1 fuel false false (st_src1, itr_src) (st_tgt1, ktr_tgt ret_tgt))
+      (SIM: @r unit S_tgt OwnT (fun st_src st_tgt _ ret_tgt => P st_src st_tgt ret_tgt) fmr None f_src f_tgt (st_src0, Ret tt) (st_tgt0, itr_tgt))
+      (SIMK: forall fmr1 st_src1 st_tgt1 ret_tgt OwnT
+                    (POST: current_iProp fmr1 (OwnT ** P st_src1 st_tgt1 ret_tgt)),
+          @r R_src R_tgt OwnT Q fmr1 fuel false false (st_src1, itr_src) (st_tgt1, ktr_tgt ret_tgt))
     :
-      hbind_rightC r Q fmr fuel f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt >>= ktr_tgt)
+      hbind_rightC r OwnT Q fmr fuel f_src f_tgt (st_src0, itr_src) (st_tgt0, itr_tgt >>= ktr_tgt)
   .
 
   Lemma hbind_rightC_mon:
