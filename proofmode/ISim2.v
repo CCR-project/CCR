@@ -37,53 +37,53 @@ Section SIM.
   Variable mn: mname.
   Variable stb_src: gname -> option fspec.
   Variable stb_tgt: gname -> option fspec.
-  Variable o: ord.
+  Variable o_src: ord.
 
-  Let _hsim := _hsim le I mn stb_src stb_tgt o.
+  Let _hsim := _hsim le I mn stb_src stb_tgt o_src.
 
-  Variant fn_has_spec (stb: gname -> option fspec) (fn: gname) (arg_src: Any.t) (arg_tgt: Any.t)
-          (pre: iProp)
-          (post: Any.t -> Any.t -> iProp)
-          (tbr: bool): Prop :=
-  | fn_has_spec_intro
-      fsp (x: fsp.(meta))
-      (STB: stb fn = Some fsp)
-      (MEASURE: ord_lt (fsp.(measure) x) o)
-      (PRE: bi_entails pre (#=> fsp.(precond) (Some mn) x arg_src arg_tgt))
-      (POST: forall ret_src ret_tgt, bi_entails (fsp.(postcond) (Some mn) x ret_src ret_tgt: iProp) (#=> post ret_src ret_tgt))
-      (TBR: tbr = is_pure (fsp.(measure) x))
-  .
+  (* Variant fn_has_spec (stb: gname -> option fspec) (fn: gname) (arg_src: Any.t) (arg_tgt: Any.t) *)
+  (*         (pre: iProp) *)
+  (*         (post: Any.t -> Any.t -> iProp) *)
+  (*         (tbr: bool): Prop := *)
+  (* | fn_has_spec_intro *)
+  (*     fsp (x: fsp.(meta)) *)
+  (*     (STB: stb fn = Some fsp) *)
+  (*     (MEASURE: ord_lt (fsp.(measure) x) o_src) *)
+  (*     (PRE: bi_entails pre (#=> fsp.(precond) (Some mn) x arg_src arg_tgt)) *)
+  (*     (POST: forall ret_src ret_tgt, bi_entails (fsp.(postcond) (Some mn) x ret_src ret_tgt: iProp) (#=> post ret_src ret_tgt)) *)
+  (*     (TBR: tbr = is_pure (fsp.(measure) x)) *)
+  (* . *)
 
-  Lemma fn_has_spec_in_stb stb fsp (x: fsp.(meta))
-        fn arg_src arg_tgt tbr
-        (STB: stb fn = Some fsp)
-        (MEASURE: ord_lt (fsp.(measure) x) o)
-        (TBR: tbr = is_pure (fsp.(measure) x))
-    :
-      fn_has_spec
-        stb fn arg_src arg_tgt
-        (fsp.(precond) (Some mn) x arg_src arg_tgt)
-        (fsp.(postcond) (Some mn) x)
-        tbr.
-  Proof.
-    econs; eauto.
-  Qed.
+  (* Lemma fn_has_spec_in_stb stb fsp (x: fsp.(meta)) *)
+  (*       fn arg_src arg_tgt tbr *)
+  (*       (STB: stb fn = Some fsp) *)
+  (*       (MEASURE: ord_lt (fsp.(measure) x) o_src) *)
+  (*       (TBR: tbr = is_pure (fsp.(measure) x)) *)
+  (*   : *)
+  (*     fn_has_spec *)
+  (*       stb fn arg_src arg_tgt *)
+  (*       (fsp.(precond) (Some mn) x arg_src arg_tgt) *)
+  (*       (fsp.(postcond) (Some mn) x) *)
+  (*       tbr. *)
+  (* Proof. *)
+  (*   econs; eauto. *)
+  (* Qed. *)
 
-  Lemma fn_has_spec_impl stb fn arg_src arg_tgt pre0 post0 pre1 post1 tbr
-        (PRE: bi_entails pre1 (#=> pre0))
-        (POST: forall ret_src ret_tgt, bi_entails (post0 ret_src ret_tgt) (#=> (post1 ret_src ret_tgt)))
-        (SPEC: fn_has_spec stb fn arg_src arg_tgt pre0 post0 tbr)
-    :
-      fn_has_spec stb fn arg_src arg_tgt pre1 post1 tbr.
-  Proof.
-    inv SPEC. econs; eauto.
-    { iIntros "H". iPoseProof (PRE with "H") as "H".
-      iMod "H". iApply PRE0. iApply "H".
-    }
-    { i. iIntros "H". iPoseProof (POST0 with "H") as "H".
-      iMod "H". iApply POST. iApply "H".
-    }
-  Qed.
+  (* Lemma fn_has_spec_impl stb fn arg_src arg_tgt pre0 post0 pre1 post1 tbr *)
+  (*       (PRE: bi_entails pre1 (#=> pre0)) *)
+  (*       (POST: forall ret_src ret_tgt, bi_entails (post0 ret_src ret_tgt) (#=> (post1 ret_src ret_tgt))) *)
+  (*       (SPEC: fn_has_spec stb fn arg_src arg_tgt pre0 post0 tbr) *)
+  (*   : *)
+  (*     fn_has_spec stb fn arg_src arg_tgt pre1 post1 tbr. *)
+  (* Proof. *)
+  (*   inv SPEC. econs; eauto. *)
+  (*   { iIntros "H". iPoseProof (PRE with "H") as "H". *)
+  (*     iMod "H". iApply PRE0. iApply "H". *)
+  (*   } *)
+  (*   { i. iIntros "H". iPoseProof (POST0 with "H") as "H". *)
+  (*     iMod "H". iApply POST. iApply "H". *)
+  (*   } *)
+  (* Qed. *)
 
   Program Definition isim'
           r g f_src f_tgt
@@ -213,7 +213,9 @@ Section SIM.
     guclo hbindC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
-    eapply isim_current.
+    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    { eapply URA.updatable_wf; et. }
+    { eapply URA.extends_updatable. exists a; r_solve. }
   Qed.
 
   Lemma isim_bind_left R_src R_tgt S_src
@@ -234,7 +236,7 @@ Section SIM.
   Lemma isim_bind_right R_src R_tgt S_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src itr_src
-        st_tgt (itr_tgt: itree Es S_tgt) ktr_tgt
+        st_tgt (itr_tgt: itree hEs S_tgt) ktr_tgt
     :
       bi_entails
         (isim (r, g, f_src, f_tgt) (fun st_src st_tgt ret_src ret_tgt => isim (r, g, false, false) Q None (st_src, itr_src) (st_tgt, ktr_tgt ret_tgt)) fuel (st_src, Ret tt) (st_tgt, itr_tgt))
@@ -249,7 +251,7 @@ Section SIM.
   Lemma isim_bind_right_pure R_src R_tgt S_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src itr_src
-        st_tgt (itr_tgt: itree Es S_tgt) ktr_tgt
+        st_tgt (itr_tgt: itree hEs S_tgt) ktr_tgt
     :
       bi_entails
         (isim (r, g, f_src, f_tgt) (fun st_src st_tgt ret_src ret_tgt => isim (r, g, false, false) Q fuel (st_src, itr_src) (st_tgt, ktr_tgt ret_tgt)) None (st_src, Ret tt) (st_tgt, itr_tgt))
@@ -260,11 +262,14 @@ Section SIM.
     guclo hbind_rightC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
+    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    { eapply URA.updatable_wf; et. }
+    { eapply URA.extends_updatable. exists a; r_solve. }
   Qed.
 
   Lemma isim_split_aux R_src R_tgt S_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-        r g st_src itr_src st_tgt (itr_tgt: itree Es S_tgt) ktr_tgt
+        r g st_src itr_src st_tgt (itr_tgt: itree hEs S_tgt) ktr_tgt
         fuel0 fuel1 f_src f_tgt
     :
       bi_entails
@@ -276,21 +281,45 @@ Section SIM.
     guclo hsplitC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
+    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    { eapply URA.updatable_wf; et. }
+    { eapply URA.extends_updatable. exists a; r_solve. }
   Qed.
 
   Lemma isim_call_impure
-        pre post w0
-        R_src R_tgt
+        w0 R_src R_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src st_tgt fn arg_src arg_tgt ktr_src ktr_tgt
-        (SPEC: fn_has_spec fn arg_src arg_tgt pre post false)
+        (* (SPECS: fn_has_spec stb_src fn arg_src arg_tgt P_src Q_src false) *)
+        fsp_src fsp_tgt
+        (SPECS: stb_src fn = Some fsp_src)
+        (SPECT: stb_tgt fn = Some fsp_tgt)
+        tbr
+        (TBR: tbr = is_pure (fsp_src.(measure) x))
+        (MEASURE: ord_lt (fsp.(measure) x) o_src)
     :
       bi_entails
-        ((I w0 st_src st_tgt)
-           ** (pre: iProp)
-           ** (∀ st_src st_tgt ret_src ret_tgt,
-                  {{"INV": inv_with le I w0 st_src st_tgt}} -* {{"POST": (post ret_src ret_tgt: iProp)}} -* isim (g, g, true, true) Q None (st_src, ktr_src ret_src) (st_tgt, ktr_tgt ret_tgt)))
-        (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Call fn arg_src) >>= ktr_src) (st_tgt, trigger (Call fn arg_tgt) >>= ktr_tgt)).
+        (
+          (* (I w0 st_src st_tgt) *)
+          (*   ** (P_src: iProp) *)
+          (*   ** (∀ st_src st_tgt ret_src ret_tgt, *)
+          (*        {{"INV": inv_with le I w0 st_src st_tgt}} *)
+          (*          -* {{"POST": (Q_src ret_src ret_tgt: iProp)}} *)
+          (*          -* isim (g, g, true, true) Q None (st_src, ktr_src ret_src) (st_tgt, ktr_tgt ret_tgt)) *)
+          ∀ (x_tgt: fsp_tgt.(meta)), ∃ (x_src: fsp_src.(meta)),
+            (fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt)
+              -* ((inv_with le I w0 st_src st_tgt ∗ fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)
+                    ∗ (∀ st_src st_tgt ret_src ret_tgt,
+                          {{"INV": inv_with le I w0 st_src st_tgt}}
+                            -* {{"POST": (fsp_src.(postcond) (Some mn) x_src ret_src ret_tgt)}}
+                            -* (((fsp_tgt.(postcond) (Some mn) x_tgt ret_tgt ret_tgt))
+                                  ∗ isim (g, g, true, true) Q None (st_src, ktr_src ret_src)
+                                  (st_tgt, ktr_tgt ret_tgt))
+                      )
+                 )
+        )
+        (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Call fn arg_src) >>= ktr_src)
+              (st_tgt, trigger (Call fn arg_tgt) >>= ktr_tgt)).
   Proof.
     red. unfold Entails. autorewrite with iprop.
     unfold isim, isim' at 2. rr. i.
@@ -300,7 +329,9 @@ Section SIM.
     end.
     { econs; eauto. refl. }
     apply current_iPropL_convert in CUR. mDesAll.
-    ired_both. gstep. inv SPEC. unfold inv_with in CUR. mDesAll. econs; eauto.
+    ired_both. gstep. econs; eauto.
+    { i. esplits;
+    }
     { mAssert _ with "A1".
       { iApply (PRE with "A1"). }
       mUpd "A2".

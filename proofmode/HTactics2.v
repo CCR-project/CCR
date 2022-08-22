@@ -113,7 +113,9 @@ Section MODE.
   Lemma harg_clo2
         A
         mn r rg
-        X (P_src P_tgt: option mname -> X -> Any.t -> Any.t -> iProp) arg_tgt
+        X_src (P_src: option mname -> X_src -> Any.t -> Any.t -> iProp)
+        X_tgt (P_tgt: option mname -> X_tgt -> Any.t -> Any.t -> iProp)
+        arg_tgt
         mp_src mp_tgt (mr_src mr_tgt: Σ) k_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -193,17 +195,17 @@ Section MODE.
         (le: A -> A -> Prop) mn r rg a n m mr_src0 mp_src0
         (fsp_tgt: fspec)
         mr_tgt0 mp_tgt0 k_tgt k_src
-        fn tbr_src tbr_tgt ord_cur arg_src arg_tgt
+        fn tbr_src tbr_tgt o_src o_tgt arg_src arg_tgt
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
         fr_src0 fr_tgt0
 
-        (POST: forall x_tgt (PURE: ord_lt (fsp_tgt.(measure) x_tgt) ord_cur
+        (POST: forall x_tgt (PURE: ord_lt (fsp_tgt.(measure) x_tgt) o_tgt
                                    /\ (tbr_tgt = true -> is_pure (fsp_tgt.(measure) x_tgt))
                                    /\ (tbr_tgt = false -> (fsp_tgt.(measure) x_tgt) = ord_top)),
           exists x_src,
-            (<<PURE: ord_lt (fsp_src.(measure) x_src) ord_cur /\
+            (<<PURE: ord_lt (fsp_src.(measure) x_src) o_src /\
                (tbr_src = true -> is_pure (fsp_src.(measure) x_src)) /\
                  (tbr_src = false -> (fsp_src.(measure) x_src) = ord_top)>>) /\
           exists I,
@@ -226,9 +228,9 @@ Section MODE.
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
              (Any.pair mp_src0 (mr_tgt0 ⋅ mr_src0)↑,
-                       (HoareCall mn tbr_src ord_cur fsp_src fn arg_src) fr_src0 >>= k_src)
+                       (HoareCall mn tbr_src o_src fsp_src fn arg_src) fr_src0 >>= k_src)
              (Any.pair mp_tgt0 mr_tgt0↑,
-                       (HoareCall mn tbr_tgt ord_cur fsp_tgt fn arg_tgt) fr_tgt0 >>= k_tgt)
+                       (HoareCall mn tbr_tgt o_tgt fsp_tgt fn arg_tgt) fr_tgt0 >>= k_tgt)
   .
   Proof.
     subst. unfold HoareCall at 2, mput, mget, assume, guarantee.
@@ -426,6 +428,19 @@ Section MODE.
 
   Local Transparent HoareCall.
 
+  Definition ord_le (o0 o1: ord): Prop :=
+    match o0, o1 with
+    | ord_pure o0, ord_pure o1 => (o0 <= o1)%ord
+    | _, ord_top => True
+    | ord_top, _ => False
+    end
+  .
+
+  Lemma ord_lt_le_lt: forall o0 o1 o2, ord_lt o0 o1 -> ord_le o1 o2 -> ord_lt o0 o2.
+  Proof.
+    i. destruct o0, o1, o2; ss. eapply Ord.lt_le_lt; eauto.
+  Qed.
+
   Lemma hAPC2
         A (a0: shelve__ A) mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
         mn r rg
@@ -451,7 +466,8 @@ Section MODE.
         (*     mk_wf R a1 ((Any.pair mp_src1 mr_src1↑), (Any.pair mp_tgt1 mr_tgt1↑))) *)
 
 
-        stb_src stb_tgt d
+        stb_src stb_tgt o_src o_tgt
+        (LE: ord_le o_tgt o_src)
         (STBINCL: stb_pure_incl stb_tgt stb_src)
         (ARG: forall
             (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t)
@@ -464,15 +480,15 @@ Section MODE.
                    (Any.pair mp_tgt1 mr_tgt1↑, k_tgt (fr_tgt1, tt)))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n _a
-             (Any.pair mp_src0 (mr_tgt0 ⋅ mr_src0)↑, (interp_hCallE_tgt mn stb_src d APC fr_src0) >>= k_src)
-             (Any.pair mp_tgt0 mr_tgt0↑, (interp_hCallE_tgt mn stb_tgt d APC fr_tgt0) >>= k_tgt)
+             (Any.pair mp_src0 (mr_tgt0 ⋅ mr_src0)↑, (interp_hCallE_tgt mn stb_src o_src APC fr_src0) >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑, (interp_hCallE_tgt mn stb_tgt o_tgt APC fr_tgt0) >>= k_tgt)
   .
   Proof.
     subst.
     unfold APC. steps. force_l. exists x. steps.
     deflag.
     (* Unset Printing Notations. *)
-    clear_until x. gen x d fr_src0 fr_tgt0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gcofix CIH. i.
+    clear_until x. gen x o_src o_tgt fr_src0 fr_tgt0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gcofix CIH. i.
     {
       rewrite unfold_APC. ired_both.
       force_r. i. force_l. exists x0.
@@ -489,6 +505,7 @@ Section MODE.
         mDesAll.
         eapply hcall_clo2; eauto.
         i. des. exists x_tgt. esplits; eauto; ss.
+        { eapply ord_lt_le_lt; eauto. }
         { replace (fr_src0 ⋅ mr_src0 ⋅ mr_tgt0) with (fr_src0 ⋅ (mr_tgt0 ⋅ mr_src0)) by r_solve.
           eapply current_iProp_entail; eauto.
           iIntros "[A [B [C [D _]]]]". iFrame. iIntros "H". iFrame. eauto. }

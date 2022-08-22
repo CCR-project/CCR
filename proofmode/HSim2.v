@@ -111,9 +111,9 @@ Section SIM.
   Variable I: world -> Any.t -> Any.t -> iProp.
 
   Variable mn: mname.
-  Variable stb_src: gname -> option fspec.
-  Variable stb_tgt: gname -> option fspec.
-  Variable o: ord.
+  Variable stb_src stb_tgt: gname -> option fspec.
+  Variable o_src o_tgt: ord.
+  Hypothesis OLE: ord_le o_tgt o_src.
   Hypothesis SIMPLTGT: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt.
   Hypothesis PUREINCL: stb_pure_incl stb_tgt stb_src.
 
@@ -235,7 +235,7 @@ Section SIM.
                   (<<SIM: forall fmr1 OwnT (ACC: current_iProp fmr1 (OwnT ** J)),
                       hsim _ _ OwnT Q fmr1 None true true (st_src1, ktr_src ret_src) (st_tgt1, ktr_tgt ret_tgt)>>)>>)
       )
-      (MEASURE: o = ord_top)
+      (MEASURE: o_src = ord_top)
       (NPURE: fsp_src.(measure) x_src = ord_top)
     :
       _hsim hsim OwnT Q fmr fuel f_src f_tgt (st_src0, trigger (Call fn arg_src) >>= ktr_src)
@@ -254,7 +254,7 @@ Section SIM.
       fuel0 fuel1 f_src f_tgt
       (SPEC: stb_src fn = Some fsp_src)
       (SPEC: stb_tgt fn = Some fsp_tgt)
-      (MEASURE: ord_lt (fsp_src.(measure) x_src) o)
+      (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
       (PURE: is_pure (fsp_src.(measure) x_src))
       (FUEL: Ord.lt fuel1 fuel0)
       (PRE: forall (x_tgt: fsp_tgt.(meta)),
@@ -397,7 +397,7 @@ Section SIM.
                   (<<SIM: forall fmr1 OwnT (ACC: current_iProp fmr1 (OwnT ** J)),
                       hsim _ _ OwnT Q fmr1 None true true (st_src1, ktr_src ret_src) (st_tgt1, ktr_tgt ret_tgt)>>)>>)
             )
-            (MEASURE: o = ord_top)
+            (MEASURE: o_src = ord_top)
             (NPURE: fsp_src.(measure) x_src = ord_top),
             P fuel f_src f_tgt (st_src0, trigger (Call fn arg_src) >>= ktr_src) (st_tgt0, trigger (Call fn arg_tgt) >>= ktr_tgt))
         (APCSTART: forall
@@ -414,7 +414,7 @@ Section SIM.
             fuel1 fuel0 f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (MEASURE: ord_lt (fsp_src.(measure) x_src) o)
+            (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
             (PURE: is_pure (fsp_src.(measure) x_src))
             (FUEL: Ord.lt fuel1 fuel0)
             (PRE: forall (x_tgt: fsp_tgt.(meta)),
@@ -597,7 +597,7 @@ Section SIM.
                   (<<SIM: forall fmr1 OwnT (ACC: current_iProp fmr1 (OwnT ** J)),
                       hsim OwnT Q fmr1 None true true (st_src1, ktr_src ret_src) (st_tgt1, ktr_tgt ret_tgt)>>)>>)
             )
-            (MEASURE: o = ord_top)
+            (MEASURE: o_src = ord_top)
             (NPURE: fsp_src.(measure) x_src = ord_top),
             P fuel f_src f_tgt (st_src0, trigger (Call fn arg_src) >>= ktr_src)
                   (st_tgt0, trigger (Call fn arg_tgt) >>= ktr_tgt))
@@ -615,7 +615,7 @@ Section SIM.
             fuel1 fuel0 f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (MEASURE: ord_lt (fsp_src.(measure) x_src) o)
+            (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
             (PURE: is_pure (fsp_src.(measure) x_src))
             (FUEL: Ord.lt fuel1 fuel0)
             (PRE: forall (x_tgt: fsp_tgt.(meta)),
@@ -744,7 +744,7 @@ Section SIM.
     { eapply PROGRESS; eauto. pclearbot. eauto. }
   Qed.
 
-  Definition mylift (stb: string -> option fspec) (fuel: option Ord.t) (mn_caller: option mname) X (x: X)
+  Definition mylift (stb: string -> option fspec) (o: ord) (fuel: option Ord.t) (mn_caller: option mname) X (x: X)
              fr
              (Q: option mname -> X -> Any.t -> Any.t -> iProp) (itr_src: itree hEs Any.t): itree Es Any.t :=
     match fuel with
@@ -779,9 +779,9 @@ Section SIM.
       paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 (@eq Any.t))
             f_src f_tgt w0
             (Any.pair st_src (mr_tgt ⋅ mr_src)↑,
-             mylift stb_src fuel mn_caller x_src fr_src Q_src itr_src)
+             mylift stb_src o_src fuel mn_caller x_src fr_src Q_src itr_src)
             (Any.pair st_tgt mr_tgt↑,
-             mylift stb_tgt None mn_caller x_tgt fr_tgt Q_tgt itr_tgt).
+             mylift stb_tgt o_tgt None mn_caller x_tgt fr_tgt Q_tgt itr_tgt).
   Proof.
     ginit. gcofix CIH. i.
     remember (st_src, itr_src). remember (st_tgt, itr_tgt).
@@ -944,10 +944,10 @@ Section SIM.
       paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 (@eq Any.t))
             f_src f_tgt w0
             (Any.pair st_src (mr_tgt ⋅ mr_src)↑,
-             (interp_hCallE_tgt mn stb_src o (interp_hEs_tgt itr_src) fr_src) >>=
+             (interp_hCallE_tgt mn stb_src o_src (interp_hEs_tgt itr_src) fr_src) >>=
              (HoareFunRet Q_src mn_caller x_src))
             (Any.pair st_tgt mr_tgt↑,
-             (interp_hCallE_tgt mn stb_tgt o (interp_hEs_tgt itr_tgt) fr_tgt) >>=
+             (interp_hCallE_tgt mn stb_tgt o_tgt (interp_hEs_tgt itr_tgt) fr_tgt) >>=
              (HoareFunRet Q_tgt mn_caller x_tgt)).
   Proof.
     i. hexploit hsim_adequacy_aux; eauto.
@@ -1154,7 +1154,7 @@ Section SIM.
                   (<<SIM: forall fmr1 OwnT (ACC: current_iProp fmr1 (OwnT ** J)),
                       g _ _ OwnT Q fmr1 None true true (st_src1, ktr_src ret_src) (st_tgt1, ktr_tgt ret_tgt)>>)>>)
       )
-      (MEASURE: o = ord_top)
+      (MEASURE: o_src = ord_top)
       (NPURE: fsp_src.(measure) x_src = ord_top)
     :
       hsimC r g OwnT Q fmr fuel f_src f_tgt (st_src0, trigger (Call fn arg_src) >>= ktr_src)
@@ -1173,7 +1173,7 @@ Section SIM.
       fuel0 fuel1 f_src f_tgt
       (SPEC: stb_src fn = Some fsp_src)
       (SPEC: stb_tgt fn = Some fsp_tgt)
-      (MEASURE: ord_lt (fsp_src.(measure) x_src) o)
+      (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
       (PURE: is_pure (fsp_src.(measure) x_src))
       (FUEL: Ord.lt fuel1 fuel0)
       (PRE: forall (x_tgt: fsp_tgt.(meta)),
@@ -1474,7 +1474,7 @@ Section SIM.
     eapply grespect_uclo.
     econs; eauto with paco. i. inv PR. eapply GF in SIM. remember None in SIM.
     remember (st_src0, Ret tt). remember (st_tgt0, itr_tgt).
-    revert st_src0 st_tgt0 itr_tgt Heqp Heqp0 Heqo0.
+    revert st_src0 st_tgt0 itr_tgt Heqp Heqp0 Heqo.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
     { hexploit SIMK; eauto. i.
       eapply GF in H. guclo hflagC_spec. econs.
@@ -1531,7 +1531,7 @@ Section SIM.
     eapply grespect_uclo.
     econs; eauto with paco. i. inv PR. eapply GF in SIM.
     remember (st_src0, Ret tt). remember (st_tgt0, itr_tgt). remember (Some fuel0).
-    revert fuel0 st_src0 st_tgt0 itr_tgt Heqp Heqp0 Heqo0.
+    revert fuel0 st_src0 st_tgt0 itr_tgt Heqp Heqp0 Heqo.
     induction SIM using _hsim_ind2; i; clarify; ired_both.
     { hexploit SIMK; eauto. i.
       eapply GF in H. guclo hflagC_spec. econs.
