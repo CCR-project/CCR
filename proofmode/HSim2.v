@@ -216,17 +216,17 @@ Section SIM.
     :
       _hsim hsim OwnT Q fmr fuel f_src f_tgt (st_src, (Ret v_src)) (st_tgt, (Ret v_tgt))
   | hsim_call
-      fsp_src fsp_tgt w0 FR
+      fsp_src fsp_tgt w0
       fn arg_src arg_tgt
       st_src0 st_tgt0 ktr_src ktr_tgt
       fuel f_src f_tgt
       (SPEC: stb_src fn = Some fsp_src)
       (SPEC: stb_tgt fn = Some fsp_tgt)
-      (PRE: forall (x_tgt: fsp_tgt.(meta)), ∃ x_src,
+      (PRE: forall (x_tgt: fsp_tgt.(meta)), ∃ x_src FR,
           (<<NPURE: fsp_src.(measure) x_src = ord_top>>)
           /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -249,18 +249,20 @@ Section SIM.
     :
       _hsim hsim OwnT Q fmr fuel f_src f_tgt (st_src, trigger (hAPC) >>= ktr_src) (st_tgt, itr_tgt)
   | hsim_apc_step
-      fsp_src (x_src: fsp_src.(meta)) fsp_tgt w0 FR arg_src
+      fsp_src fsp_tgt w0 arg_src
       fn arg_tgt
       st_src0 st_tgt0 itr_src ktr_tgt
       fuel0 fuel1 f_src f_tgt
       (SPEC: stb_src fn = Some fsp_src)
       (SPEC: stb_tgt fn = Some fsp_tgt)
-      (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
-      (PURE: is_pure (fsp_src.(measure) x_src))
       (FUEL: Ord.lt fuel1 fuel0)
-      (PRE: forall (x_tgt: fsp_tgt.(meta)),
+      (PRE: forall (x_tgt: fsp_tgt.(meta)), ∃ x_src FR,
+          (<<MEASURE: ord_lt (fsp_src.(measure) x_src) o_src>>)
+          /\
+          (<<PURE: is_pure (fsp_src.(measure) x_src)>>)
+          /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -379,17 +381,17 @@ Section SIM.
             (RET: current_iProp fmr (Own OwnT ** Q st_src st_tgt v_src v_tgt)),
             P fuel f_src f_tgt (st_src, (Ret v_src)) (st_tgt, (Ret v_tgt)))
         (CALL: forall
-            fsp_src fsp_tgt w0 FR
+            fsp_src fsp_tgt w0
             fn arg_src arg_tgt
             st_src0 st_tgt0 ktr_src ktr_tgt
             fuel f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (PRE: forall (x_tgt: fsp_tgt.(meta)), exists x_src,
+            (PRE: forall (x_tgt: fsp_tgt.(meta)), exists x_src FR,
           (<<NPURE: fsp_src.(measure) x_src = ord_top>>)
           /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -410,18 +412,20 @@ Section SIM.
             (IH: P (fuel1) true f_tgt (st_src, ktr_src tt) (st_tgt, itr_tgt)),
             P fuel f_src f_tgt (st_src, trigger (hAPC) >>= ktr_src) (st_tgt, itr_tgt))
         (APCSTEP: forall
-            fsp_src (x_src: fsp_src.(meta)) fsp_tgt w0 FR arg_src
+            fsp_src fsp_tgt w0 arg_src
             fn arg_tgt
             st_src0 st_tgt0 itr_src ktr_tgt
             fuel1 fuel0 f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
-            (PURE: is_pure (fsp_src.(measure) x_src))
             (FUEL: Ord.lt fuel1 fuel0)
-            (PRE: forall (x_tgt: fsp_tgt.(meta)),
+            (PRE: forall (x_tgt: fsp_tgt.(meta)), ∃ x_src FR,
+          (<<MEASURE: ord_lt (fsp_src.(measure) x_src) o_src>>)
+          /\
+          (<<PURE: is_pure (fsp_src.(measure) x_src)>>)
+          /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -580,17 +584,17 @@ Section SIM.
             (RET: current_iProp fmr (Own OwnT ** Q st_src st_tgt v_src v_tgt)),
             P fuel f_src f_tgt (st_src, (Ret v_src)) (st_tgt, (Ret v_tgt)))
         (CALL: forall
-            fsp_src fsp_tgt w0 FR
+            fsp_src fsp_tgt w0
             fn arg_src arg_tgt
             st_src0 st_tgt0 ktr_src ktr_tgt
             fuel f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (PRE: forall (x_tgt: fsp_tgt.(meta)), exists x_src,
+            (PRE: forall (x_tgt: fsp_tgt.(meta)), exists x_src FR,
           (<<NPURE: fsp_src.(measure) x_src = ord_top>>)
           /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -612,18 +616,20 @@ Section SIM.
             (IH: P (fuel1) true f_tgt (st_src, ktr_src tt) (st_tgt, itr_tgt)),
             P fuel f_src f_tgt (st_src, trigger (hAPC) >>= ktr_src) (st_tgt, itr_tgt))
         (APCSTEP: forall
-            fsp_src (x_src: fsp_src.(meta)) fsp_tgt w0 FR arg_src
+            fsp_src fsp_tgt w0 arg_src
             fn arg_tgt
             st_src0 st_tgt0 itr_src ktr_tgt
             fuel1 fuel0 f_src f_tgt
             (SPEC: stb_src fn = Some fsp_src)
             (SPEC: stb_tgt fn = Some fsp_tgt)
-            (MEASURE: ord_lt (fsp_src.(measure) x_src) o_src)
-            (PURE: is_pure (fsp_src.(measure) x_src))
             (FUEL: Ord.lt fuel1 fuel0)
-            (PRE: forall (x_tgt: fsp_tgt.(meta)),
+            (PRE: forall (x_tgt: fsp_tgt.(meta)), ∃ x_src FR,
+          (<<MEASURE: ord_lt (fsp_src.(measure) x_src) o_src>>)
+          /\
+          (<<PURE: is_pure (fsp_src.(measure) x_src)>>)
+          /\
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -809,12 +815,13 @@ Section SIM.
       }
     }
     { destruct fuel; steps.
-      { astop. steps. rewrite SPEC. steps. eapply hcall_clo2.
+      { astop. steps. rewrite SPEC. steps. eapply hcall_clo2; eauto.
         i. des. specialize (PRE x_tgt0). des. esplits; eauto; ss.
         { rewrite NPURE. rewrite MEASURE in *. splits; ss. }
         { eapply current_iPropL_convert in PRE.
           replace (fr_src ⋅ mr_src ⋅ mr_tgt) with (fr_src ⋅ (mr_tgt ⋅ mr_src)) by r_solve. eauto.
-          eapply current_iProp_entail in PRE; eauto. iIntros "[[[A B] C] _]". iSplitL; eauto. iFrame. }
+          eapply current_iProp_entail in PRE; eauto. iIntros "[[[A B] C] _]". iSplitL; eauto. iFrame.
+        }
         { i. ss. exploit POST; eauto. i; des. esplits; eauto.
           i. steps. gbase. hexploit CIH.
           { eapply SIM; eauto. eapply current_iProp_entail; [eauto|].
@@ -822,7 +829,7 @@ Section SIM.
           i. ss.
         }
       }
-      { rewrite SPEC. steps. eapply hcall_clo2.
+      { rewrite SPEC. steps. eapply hcall_clo2; eauto.
         i. des. specialize (PRE x_tgt0). des. esplits; eauto; ss.
         { rewrite NPURE. rewrite MEASURE in *. splits; ss. }
         { eapply current_iPropL_convert in PRE.
@@ -870,7 +877,7 @@ Section SIM.
       force_l; [eauto|..]. steps.
       force_l. exists (fn, arg_src). steps.
       rewrite SPEC. steps.
-      eapply hcall_clo2. i. des. spc PRE. des. esplits; eauto; ss.
+      eapply hcall_clo2; eauto. i. des. spc PRE. des. esplits; eauto; ss.
       { replace (fr_src ⋅ mr_src ⋅ mr_tgt) with (fr_src ⋅ (mr_tgt ⋅ mr_src)) by r_solve.
         eapply current_iProp_entail; eauto.
         iIntros "[[A B] C]". iFrame.
@@ -1148,7 +1155,7 @@ Section SIM.
       (SPEC: stb_tgt fn = Some fsp_tgt)
       (PRE: forall (x_tgt: fsp_tgt.(meta)),
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,
@@ -1183,7 +1190,7 @@ Section SIM.
       (FUEL: Ord.lt fuel1 fuel0)
       (PRE: forall (x_tgt: fsp_tgt.(meta)),
           (<<PRE: current_iProp fmr (Own OwnT ** ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt) ==∗
-                                               (FR ** I w0 st_src0 st_tgt0 **
+                                               (FR ** inv_with w0 st_src0 st_tgt0 **
                                                    fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)))>>)
           /\
           (<<POST: forall st_src1 st_tgt1 ret_src ret_tgt,

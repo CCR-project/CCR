@@ -190,9 +190,10 @@ Section MODE.
   Lemma hcall_clo2
         (fsp_src: fspec)
 
-        A (a0: shelve__ A) FR
+        A (a0: shelve__ A)
 
         (le: A -> A -> Prop) mn r rg a n m mr_src0 mp_src0
+        `{PreOrder _ le}
         (fsp_tgt: fspec)
         mr_tgt0 mp_tgt0 k_tgt k_src
         fn tbr_src tbr_tgt o_src o_tgt arg_src arg_tgt
@@ -208,11 +209,11 @@ Section MODE.
             (<<PURE: ord_lt (fsp_src.(measure) x_src) o_src /\
                (tbr_src = true -> is_pure (fsp_src.(measure) x_src)) /\
                  (tbr_src = false -> (fsp_src.(measure) x_src) = ord_top)>>) /\
-          exists I,
+          exists I FR,
             (<<ACC: current_iPropL (fr_src0 ⋅ mr_src0 ⋅ mr_tgt0) [("I", I)] >>) /\
             (<<UPDATABLE: bi_entails I (OwnT (fr_tgt0) ** OwnT (mr_tgt0) **
                               (fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt
-                                 ==∗ (FR ** R a0 mp_src0 mp_tgt0 **
+                                 ==∗ (FR ** (∃ a1, R a1 mp_src0 mp_tgt0 ** ⌜le a0 a1⌝) **
                                          (fsp_src.(precond) (Some mn) x_src arg_src arg_tgt: iProp))))>>) /\
             (<<POST: forall (ret_src ret_tgt: Any.t) (mp_src1 mp_tgt1 : Any.t),
             exists J,
@@ -260,8 +261,8 @@ Section MODE.
     mUpd "A1". mDesAll.
 
     inv ACC. rr in IPROP. repeat (autorewrite with iprop in IPROP; autounfold with iprop in IPROP; ss).
-    des. subst. rename a1 into mr_src1. rename a3 into ro_src. rename a4 into fr_tgt_. rename a5 into mr_tgt_.
-    rename a2 into fr_src.
+    des. subst. rename a2 into mr_src1. rename a3 into fr_src.
+    rename a4 into ro_src. rename a5 into fr_tgt_. rename a6 into mr_tgt_.
     unfold HoareCall at 1, mput, mget, assume, guarantee.
     steps.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists (ro_src, (fr_src ⋅ fr_tgt), (mr_tgt1 ⋅ mr_src1)).
@@ -295,10 +296,11 @@ Section MODE.
       instantiate (1:=ri_src ⋅ fr_src ⋅ fr_tgt ⋅ mr_tgt). r_wf x6.
     }
     eapply current_iProp_entail in ACC; cycle 1.
-    { etrans; try eassumption. iIntros "H". iDestruct "H" as "[A [B [C _]]]". iFrame. iSplits; et. }
+    { etrans; try eassumption. iIntros "H". iDestruct "H" as "[A [B [C _]]]". iFrame. iSplits; et.
+      iPureIntro. etrans; eauto. }
     inv ACC. rr in IPROP. repeat (autorewrite with iprop in IPROP; autounfold with iprop in IPROP; ss).
     des. subst.
-    rename a1 into ri_tgt. rename b into jr.
+    rename a2 into ri_tgt. rename b into jr.
     assert(WF: URA.wf (ri_tgt ⋅ jr ⋅ (fr_tgt ⋅ mr_tgt))).
     { eapply URA.updatable_wf; try apply x6.
       replace (ri_src ⋅ (fr_src ⋅ fr_tgt) ⋅ (mr_tgt ⋅ mr_src')) with
@@ -508,7 +510,8 @@ Section MODE.
         { eapply ord_lt_le_lt; eauto. }
         { replace (fr_src0 ⋅ mr_src0 ⋅ mr_tgt0) with (fr_src0 ⋅ (mr_tgt0 ⋅ mr_src0)) by r_solve.
           eapply current_iProp_entail; eauto.
-          iIntros "[A [B [C [D _]]]]". iFrame. iIntros "H". iFrame. eauto. }
+          iIntros "[A [B [C [D _]]]]". iFrame. iIntros "H". iFrame. iModIntro.
+          iSplitL "D"; try iAssumption. iSplits; eauto. }
         i.
         assert(ret_tgt = ret_src).
         { admit "simple". }
@@ -517,10 +520,7 @@ Section MODE.
         { iIntros "[[A B] C]". iFrame. iCombine "A B" as "A". eauto. }
         i. steps.
         move CIH at bottom.
-        deflag. gbase. mDesAll. eapply (CIH a); et.
-        { i. eapply ARG. eapply current_iProp_entail; eauto.
-          iIntros "[A [B [C [D _]]]]". iFrame. iDestruct "C" as (a2) "[C %]". iSplits; eauto.
-          iPureIntro. etrans; et. }
+        deflag. gbase. mDesAll. eapply (CIH); et.
         { eapply current_iProp_entail; eauto. iIntros "[A [B [C [D _]]]]". iFrame. iSplits; eauto. }
     }
   Unshelve. all: try exact 0.
