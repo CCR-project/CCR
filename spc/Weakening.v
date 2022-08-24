@@ -55,17 +55,18 @@ Section PROOF.
   Lemma weakening_itree
     :
       forall
-        R mp (mr: Σ) ord_cur_src ord_cur_tgt (ORD: ord_weaker ord_cur_tgt ord_cur_src)  ctx itr,
+        R mp (mr: Σ) ord_cur_src ord_cur_tgt (ORD: ord_weaker ord_cur_tgt ord_cur_src) fr
+        (WF: URA.wf (fr ⋅ mr)) itr,
         paco8 (_sim_itree wf top2) bot8 (Σ * R)%type (Σ * R)%type
               (fun st_src st_tgt vret_src vret_tgt =>
-                 exists mp (mr: Σ) ctx vret,
+                 exists mp (mr: Σ) fr vret,
                    st_src = Any.pair mp mr↑ /\
                    st_tgt = Any.pair mp mr↑ /\
-                   vret_src = (ctx, vret) /\
-                   vret_tgt = (ctx, vret))
+                   vret_src = (fr, vret) /\
+                   vret_tgt = (fr, vret))
               false false tt
-              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur_src itr ctx)
-              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur_tgt itr ctx).
+              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur_src itr fr)
+              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur_tgt itr fr).
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. gstep. econs. esplits; et. }
@@ -78,12 +79,13 @@ Section PROOF.
       steps. specialize (WEAKER x (Some mn)). des.
       assert (exists rarg_src,
                  (<<PRE: precond fsp_src (Some mn) x_tgt varg_src x0 rarg_src>>) /\
-                 (<<VALID: URA.wf (rarg_src ⋅ c1 ⋅ ctx ⋅ c)>>)
+                 (<<VALID: URA.updatable (fr ⋅ mr) (rarg_src ⋅ c1 ⋅ c)>>)
              ).
       { hexploit PRE. i. uipropall. hexploit (H c0); et.
-        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ ctx ⋅ c). TTTTTTTTTTTTTTTT r_wf _GUARANTEE. }
-        { instantiate (1:=c1 ⋅ ctx ⋅ c). r_wf _GUARANTEE. }
-        i. des. esplits; et. r_wf H0.
+        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ c). rewrite URA.add_assoc. eapply URA.updatable_wf; et. }
+        i. des. esplits; et. etrans; et.
+        eapply URA.updatable_add; try refl.
+        eapply URA.updatable_add; try refl. r. eauto.
       }
       des. force_l. exists (rarg_src, c1, c).
       steps. force_l; et.
@@ -98,21 +100,22 @@ Section PROOF.
       }
       steps.
       { esplits; et. }
-      i. destruct w1. red in WF. des; clarify.
+      i. destruct w1. red in WF0. des; clarify.
       rewrite Any.pair_split in _UNWRAPU. des; clarify.
       steps. rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
+      rename x2 into vret_src.
       assert (exists rret_tgt,
-                 (<<POSTTGT: postcond f (Some mn) x x1 vret rret_tgt>>) /\
-                 (<<VALIDTGT: URA.wf (rret_tgt ⋅ c1 ⋅ c3 ⋅ mr0)>>)
+                 (<<POSTTGT: postcond f (Some mn) x vret_src vret rret_tgt>>) /\
+                 (<<VALIDTGT: URA.wf (rret_tgt ⋅ c1 ⋅ mr0)>>)
              ).
-      { hexploit POST. i. uipropall. hexploit (H c2); et.
-        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ c3 ⋅ mr0). r_wf _ASSUME. }
-        { instantiate (1:=c1 ⋅ c3 ⋅ mr0). r_wf _ASSUME. }
-        i. des. esplits; et. r_wf H0.
+      { hexploit POST. i. uipropall. hexploit (H x1); et.
+        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ mr0). rewrite URA.add_assoc. eapply URA.updatable_wf; et.
+          refl. }
+        i. des. esplits; et. eapply URA.updatable_add; et. refl.
       }
-      des. force_r. exists (rret_tgt, c3).
+      des. force_r. exists (rret_tgt).
       steps. force_r; et.
-      steps. force_r. exists x1.
+      steps. force_r. exists vret_src.
       steps. force_r; et.
       steps. deflag. gbase. eapply CIH; ss.
     }
