@@ -439,6 +439,34 @@ Section SIM.
     { eapply URA.updatable_wf; et. etrans; et. }
   Qed.
 
+  Lemma isim_apc_both
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g f_src f_tgt st_src0 st_tgt0 ktr_src ktr_tgt
+        fuel0
+        w0
+    :
+        bi_entails
+          (inv_with le I w0 st_src0 st_tgt0 **
+               (∀ st_src1 st_tgt1, inv_with le I w0 st_src1 st_tgt1 -*
+                     isim (g, g, true, true) Q None (st_src1, ktr_src tt) (st_tgt1, ktr_tgt tt)))
+          (isim (r, g, f_src, f_tgt) Q fuel0 (st_src0, trigger hAPC >>= ktr_src)
+                (st_tgt0, trigger hAPC >>= ktr_tgt))
+  .
+  Proof.
+    eapply isim_final. i.
+    eapply hsimC_uclo. econsr; eauto.
+    { eapply current_iProp_entail; eauto. iIntros "[A [B C]]". iFrame. iAssumption. }
+    i. fold _hsim.
+    clear CUR. eapply current_iProp_entail in ACC; cycle 1.
+    { iIntros "[[A B] C]". iDestruct ("C" with "B") as "C". iCombine "A C" as "A". iAssumption. }
+    inv ACC. uipropall. des. subst.
+    assert(URA.updatable fmr1 (b ⋅ OwnT0)).
+    { etrans; et. rewrite URA.add_comm. eapply URA.updatable_add; try refl. eapply URA.extends_updatable; et. }
+    guclo hupdC_spec. econs; try apply IPROP1; et.
+    { eapply URA.updatable_wf; et. }
+  Qed.
+
   Lemma isim_progress R_src R_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel st_src itr_src st_tgt itr_tgt
@@ -1719,9 +1747,12 @@ Require Import OpenDef.
 
 Section ADEQUACY.
   Context `{Σ: GRA.t}.
+  Variable world: Type.
+  Variable le: relation world.
+  Context `{PreOrder _ le}.
 
   Lemma isim_fun_to_tgt_aux
-        A wf (le: A -> A -> Prop) `{PreOrder _ le} mn stb_src stb_tgt
+        wf mn stb_src stb_tgt
         f_src f_tgt w
         (fsp_src fsp_tgt: fspecbody) x y st_src st_tgt
         (EQ: x = y)
@@ -1729,9 +1760,8 @@ Section ADEQUACY.
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure fsp_tgt x_tgt) (measure fsp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
-            bi_entails
-              ((inv_with le wf w st_src st_tgt) ** (fsp_src.(precond) mn_caller x_src arg_src arg_tgt: iProp))
-              ((fsp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt: iProp) ** isim
+              (inv_with le wf w st_src st_tgt ** fsp_src.(precond) mn_caller x_src arg_src arg_tgt) ==∗
+              (fsp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt ** isim
                  le wf mn stb_src stb_tgt (fsp_src.(measure) x_src)
                  (bot10, bot10, true, true)
                  (fun st_src st_tgt ret_src ret_tgt =>
@@ -1761,26 +1791,22 @@ Section ADEQUACY.
       iDestruct (x0 with "[A B]") as "C".
       { iFrame. unfold inv_with. iSplits; eauto. }
       iFrame.
-      eauto.
     }
     i. gfinal. right. eapply hsim_adequacy; auto.
-    { admit "ez". }
+    { admit "ez - stb-pure-incl". }
     ginit. { eapply cpn10_wcompat; eauto with paco. }
     eapply isim_init; eauto.
     { eapply current_iProp_entail; et. start_ipm_proof. iSplitR "FR"; try iAssumption. iSplitL "TF"; eauto. }
   Qed.
 
   Lemma isim_fun_to_tgt
-        A wf (le: A -> A -> Prop) `{PreOrder _ le} mn stb_src stb_tgt
-        w
-        (fsp_src fsp_tgt: fspecbody) st_src st_tgt
-        (WF: mk_wf wf w (st_src, st_tgt))
+        wf mn stb_src stb_tgt
+        (fsp_src fsp_tgt: fspecbody)
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure fsp_tgt x_tgt) (measure fsp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
-            bi_entails
-              ((inv_with le wf w st_src st_tgt) ** (fsp_src.(precond) mn_caller x_src arg_src arg_tgt: iProp))
-              ((fsp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt: iProp) ** isim
+              (inv_with le wf w st_src st_tgt ** fsp_src.(precond) mn_caller x_src arg_src arg_tgt) ==∗
+              (fsp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt ** isim
                  le wf mn stb_src stb_tgt (fsp_src.(measure) x_src)
                  (bot10, bot10, true, true)
                  (fun st_src st_tgt ret_src ret_tgt =>
@@ -1802,16 +1828,13 @@ Section ADEQUACY.
   Qed.
 
   Lemma isim_fun_to_tgt_open
-        A wf (le: A -> A -> Prop) `{PreOrder _ le} mn stb_src stb_tgt
-        w
-        (ksp_src ksp_tgt: kspecbody) st_src st_tgt
-        (WF: mk_wf wf w (st_src, st_tgt))
+        wf mn stb_src stb_tgt
+        (ksp_src ksp_tgt: kspecbody)
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure ksp_tgt x_tgt) (measure ksp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
-            bi_entails
-              ((inv_with le wf w st_src st_tgt) ** (ksp_src.(precond) mn_caller x_src arg_src arg_tgt: iProp))
-              ((ksp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt: iProp) ** isim
+              (inv_with le wf w st_src st_tgt ** ksp_src.(precond) mn_caller x_src arg_src arg_tgt) ==∗
+              (ksp_tgt.(precond) mn_caller x_tgt arg_tgt arg_tgt ** isim
                  le wf mn stb_src stb_tgt (ksp_src.(measure) x_src)
                  (bot10, bot10, true, true)
                  (fun st_src st_tgt ret_src ret_tgt =>
@@ -1827,8 +1850,7 @@ Section ADEQUACY.
                           | ord_top => ksp_tgt.(ksb_kbody) (mn_caller, arg_tgt)
                           end)))
         (CONTEXT: forall w mn_caller arg st_src st_tgt,
-            bi_entails
-              (inv_with le wf w st_src st_tgt)
+              (inv_with le wf w st_src st_tgt) ==∗
               (isim
                  le wf mn stb_src stb_tgt ord_top
                  (bot10, bot10, true, true)
@@ -1847,19 +1869,16 @@ Section ADEQUACY.
     destruct b.
     { gfinal. right. eapply isim_fun_to_tgt_aux; eauto. }
     { gfinal. right. eapply isim_fun_to_tgt_aux; eauto. i. ss. exists tt. esplits; eauto.
-      i. iIntros "[H0 %]". subst. iSplits; ss. iDestruct (CONTEXT with "H0") as "H0".
-      iApply isim_wand; eauto. iFrame. eauto.
+      i. iIntros "[H0 %]". subst. iSplits; ss. iDestruct (CONTEXT with "H0") as ">H0".
+      iModIntro. iSplits; et. iApply isim_wand; eauto. iFrame. eauto.
     }
   Qed.
 
   Lemma isim_fun_to_tgt_open_trivial
-        A wf (le: A -> A -> Prop) `{PreOrder _ le} mn stb_src stb_tgt
-        w
-        body_src body_tgt st_src st_tgt
-        (WF: mk_wf wf w (st_src, st_tgt))
+        wf mn stb_src stb_tgt
+        body_src body_tgt
         (CONTEXT: forall w mn_caller arg st_src st_tgt,
-            bi_entails
-              (inv_with le wf w st_src st_tgt)
+              (inv_with le wf w st_src st_tgt) ==∗
               (isim
                  le wf mn stb_src stb_tgt ord_top
                  (bot10, bot10, true, true)
@@ -1874,7 +1893,8 @@ Section ADEQUACY.
   Proof.
     eapply isim_fun_to_tgt_open; ss; eauto. i. esplits; ss; et. i.
     iIntros "[H0 %]". subst. iSplits; ss; et.
-    iDestruct (CONTEXT with "H0") as "H".
+    iDestruct (CONTEXT with "H0") as ">H".
+    iModIntro. iSplits; et.
     iApply isim_wand; eauto. iFrame; eauto.
   Qed.
 

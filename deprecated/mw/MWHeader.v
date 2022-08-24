@@ -397,62 +397,6 @@ Section PROOF.
 End PROOF.
 
 
-Ltac get_fresh_string :=
-  match goal with
-  | |- context["A"] =>
-    match goal with
-    | |- context["A0"] =>
-      match goal with
-      | |- context["A1"] =>
-        match goal with
-        | |- context["A2"] =>
-          match goal with
-          | |- context["A3"] =>
-            match goal with
-            | |- context["A4"] =>
-              match goal with
-              | |- context["A5"] => fail 5
-              | _ => constr:("A5")
-              end
-            | _ => constr:("A4")
-            end
-          | _ => constr:("A3")
-          end
-        | _ => constr:("A2")
-        end
-      | _ => constr:("A1")
-      end
-    | _ => constr:("A0")
-    end
-  | _ => constr:("A")
-  end
-.
-Ltac iDes :=
-  repeat multimatch goal with
-         | |- context[@environments.Esnoc _ _ (INamed ?namm) ?ip] =>
-           match ip with
-           | @bi_or _ _ _ =>
-             let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ "|" +:+ namm +:+ "]")) in
-             iDestruct namm as pat
-           | @bi_pure _ _ => iDestruct namm as "%"
-           | @iNW _ ?newnamm _ => iEval (unfold iNW) in namm; iRename namm into newnamm
-           | @bi_sep _ _ _ =>
-             let f := get_fresh_string in
-             let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ " " +:+ f +:+ "]")) in
-             iDestruct namm as pat
-           | @bi_exist _ _ (fun x => _) =>
-             let x := fresh x in
-             iDestruct namm as (x) namm
-           end
-         end
-.
-Ltac iCombineAll :=
-  repeat multimatch goal with
-         | |- context[@environments.Esnoc _ (@environments.Esnoc _ _ (INamed ?nam1) _) (INamed ?nam2) _] =>
-           iCombine nam1 nam2 as nam1
-         end
-.
-Ltac xtra := iCombineAll; iAssumption.
 
 (*** TODO: MOVE TO ImpPrelude ***)
 Definition add_ofs (ptr: val) (d: Z): val :=

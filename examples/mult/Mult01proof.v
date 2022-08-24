@@ -17,8 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 
 Require Import STB ProofMode.
-Require Import HTactics2.
-TTTT
+Require Import HTactics2 ISim2 IProofMode2.
 
 Set Implicit Arguments.
 
@@ -45,121 +44,43 @@ Section SIMMODSEM.
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
-    { esplits. econs; ss. eapply to_semantic. iIntros "H". iSplits; ss. }
+    { esplits. rp; [econs|..]; try refl; cycle 1.
+      { repeat f_equal. rewrite URA.unit_id; ss. }
+      eapply to_semantic. iIntros "H". iSplits; ss. }
 
     econs; [|ss].
-
-    {
-      (*** init ***)
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-
-
-
-      harg. mDesAll; clarify. steps.
-      harg_tgt.
-      { iFrame. iSplits; et. instantiate (1:=True%I); ss. }
-
-      steps.
-
-
-      hret _; ss.
-      { iDestruct "Q" as "[[A B] %]". iModIntro. iFrame. iSplits; et. }
-      { iDestruct "Q" as "[_ %]". clarify. iPureIntro. r. esplits; et. }
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { econs; eauto. }
+      unfold cfunN, cfunU, ccallN, ccallU. ss.
+      i. esplits; eauto.
+      iIntros. iDes. iModIntro. iFrame. iSplits; ss. steps. iIntros. iDes. subst. iFrame; ss.
     }
 
     econs; [|ss].
-    {
-      (*** init ***)
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-
-
-
-      harg. mDesAll; clarify. steps.
-      mAssert _ with "PRE" as "PRE".
-      { iApply (OwnM_Upd with "PRE"). eapply f01_update. }
-      mUpd "PRE".
-
-      harg_tgt.
-      { iModIntro. iFrame. iSplits; et. iAssumption. }
-
-      unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
-
-
-      hcall _ _.
-      { iModIntro. iDestruct "P" as "%". iDestruct "FR" as "[A [B %]]". iSplits; ss; et. iFrame.
-        iSplits; ss; et. iAssumption. }
-      { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
-      mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
-
-
-
-      hpost_tgt.
-      { iModIntro. iFrame. iSplits; et. iAssumption. }
-      steps. rewrite _UNWRAPU. steps. stb_tac. clarify.
-
-
-
-      hcall _ _.
-      { iModIntro. iDestruct "FR" as "[A %]".
-        iDestruct "P" as "[% %]". iSplits; ss; et. instantiate (1:=True%I). iFrame. ss. }
-      { i. iIntros "H". ss. }
-      clear_fast. mDesAll. clarify. steps.
-
-
-
-      hpost_tgt.
-      { iModIntro. iFrame. iSplits; et. iAssumption. } 
-      steps. rewrite _UNWRAPU0. steps.
-
-
-      hret _; ss.
-      { iDestruct "Q" as "[[A B] %]". iPoseProof (OwnM_Upd with "A") as "A".
-        { eapply f23_update. }
-        iMod "A". iModIntro. iSplits; ss; et. iFrame. }
-      { iDestruct "Q" as "[_ %]". iPureIntro. clarify. r. esplits; et. }
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { econs; eauto. }
+      unfold cfunN, cfunU, ccallN, ccallU. ss.
+      i. esplits; eauto.
+      iIntros. iDes. iFrame. iSplits; ss. iDestruct (OwnM_Upd with "A0") as ">A0".
+      { eapply f01_update. }
+      steps. iIntros. iDes. subst. iFrame; ss. iModIntro. iSplits; et. steps.
+      iSplits; ss. iIntros. iSplits; ss. iIntros; iDes. iFrame. iSplits; ss. iIntros; iDes. subst.
+      iFrame. iSplits; ss. steps. iSplits; ss. iIntros. iSplits; ss. iIntros. iFrame. iSplits; ss.
+      iIntros. iDes; subst. iSplits; ss. steps. iIntros; iDes. iFrame.
+      iDestruct (OwnM_Upd with "A0") as ">A0".
+      { eapply f23_update. }
+      iFrame. iModIntro. iSplits; ss.
     }
 
     econs; [|ss].
-    {
-      (*** init ***)
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-
-
-
-
-      harg. mDesAll; clarify. steps.
-      harg_tgt.
-      { iFrame. iSplits; et. instantiate (1:=True%I). ss. }
-
-      unfold ccallU. steps.
-      hAPC _.
-      { instantiate (1:=True%I). et. }
-      { r. i. autounfold with stb in *; autorewrite with stb in *. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
-        - r in PURE. des. ss.
-        - r in PURE. des. ss.
-      }
-      steps.
-
-      hret _; ss.
-      { iDestruct "Q" as "[[A B] %]". clarify. iModIntro. iFrame; ss. }
-      { iDestruct "Q" as "[[A B] %]". clarify. iPureIntro. r. esplits; et. }
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { econs; eauto. }
+      unfold cfunN, cfunU, ccallN, ccallU. ss.
+      i. esplits; eauto.
+      iIntros. iDes. iFrame. iModIntro. iSplits; ss. steps.
+      iApply isim_apc_both. iFrame. iIntros.
+      steps. iIntros. iDes. subst. iFrame; ss.
     }
-
   Unshelve. all: ss. all: try exact 0.
   Qed.
 

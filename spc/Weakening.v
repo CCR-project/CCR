@@ -81,7 +81,7 @@ Section PROOF.
                  (<<VALID: URA.wf (rarg_src ⋅ c1 ⋅ ctx ⋅ c)>>)
              ).
       { hexploit PRE. i. uipropall. hexploit (H c0); et.
-        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ ctx ⋅ c). r_wf _GUARANTEE. }
+        { eapply URA.wf_mon. instantiate (1:=c1 ⋅ ctx ⋅ c). TTTTTTTTTTTTTTTT r_wf _GUARANTEE. }
         { instantiate (1:=c1 ⋅ ctx ⋅ c). r_wf _GUARANTEE. }
         i. des. esplits; et. r_wf H0.
       }

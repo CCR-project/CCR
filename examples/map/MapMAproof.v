@@ -16,9 +16,8 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics2 ProofMode STB Invariant.
+Require Import HTactics2 HSim2 ISim2 ProofMode IProofMode2 STB Invariant.
 Require Import Mem1.
-TTTT
 
 Set Implicit Arguments.
 
@@ -168,176 +167,77 @@ Section SIMMODSEM.
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss.
-    2: { esplits. econs; et. eapply to_semantic. iIntros "H". iSplitL "H"; eauto. iApply Own_unit. ss. }
+    2: { esplits. rp; [econs|..]; try refl; cycle 1. { rewrite URA.unit_idl. refl. }
+         eapply to_semantic. iIntros "H". iRight; eauto. }
     Local Opaque initial_map black_map map_points_to unallocated.
-    econs.
-    {
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-      unfold MapM.initF, MapA.initF, ccallU, ccallN.
-      harg. fold wf. ss.
-      unfold pending in ACC. mDesAll; des; clarify.
-      mDesOr "INVS".
-      { mDesAll. mAssertPure False; ss. iApply (pending1_unique with "A A2"). }
-      steps. mDesAll. des. subst.
-      mAssert _ with "INVS".
-      { iApply (initial_map_initialize with "INVS"). }
-      mDesAll.
-      harg_tgt.
-      { iModIntro. iFrame. iSplits; et. xtra. }
+    econs; [|ss].
+    { econs; r; ss. apply isim_fun_to_tgt; eauto.
+      { (** TODO: can we remove this? it should be automatic **) typeclasses eauto. }
+      cbn. unfold MapM.initF, MapA.initF, cfunN, cfunU, ccallN, ccallU. cbn.
+      i. esplits; ss. i.
+      iIntros. iDes. subst. unfold pending. iDes. iFrame. unfold inv_with. iDes.
+      { iExFalso. iApply (pending1_unique with "A0 A3"). }
+      des; subst. iModIntro. iSplits; ss. steps.
+      iDestruct (initial_map_initialize with "A") as "A". iDes.
+      steps. iApply isim_apc_both. iSplitR "A1".
+      { unfold inv_with. iSplits; ss. iLeft. iSplits; ss. iFrame. iSplits; et. }
+      iIntros. iDes. steps. iIntros. iDes. iModIntro. iFrame.
+    }
+    econs; [|ss].
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { typeclasses eauto. }
+      unfold MapM.getF, MapA.getF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
+      iIntros. iDes. unfold inv_with. iDes.
+      2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
+      des; subst. iFrame. iModIntro. iSplits; ss; et.
       steps.
-      (*** calling APC ***)
-      hAPC _.
-      { iIntros "A"; iDes. iSplitR "A".
-        { iLeft. iExists _, _. iFrame. iSplits; eauto. }
-        { iApply "A". }
-      }
-      { auto. }
-      fold wf. steps.
-      hret _; ss.
-      { iModIntro.
-        iDestruct "Q" as "[CLOSED %]". subst. iFrame.
-        iDestruct "FR" as "[H0 H1]". iDestruct "H0" as "[H0 | H0]".
-        { iDestruct "H0" as (f0 sz0) "[[[% H2] H3] H4]". des; subst.
-          iFrame. iSplits; auto.
-          iLeft. iExists _, _. iFrame. iPureIntro. eauto.
-        }
-        { iDes. des; subst. iSplitR "H1"; eauto. }
-      }
-      { iDestruct "Q" as "[_ %]". des; subst. iPureIntro.
-        rr. esplits; eauto.
-      }
+      iAssert (⌜(0 ≤ x_src0 < sz)%Z⌝)%I as "%".
+      { iApply (unallocated_range with "[A3]"); eauto. }
+      force_r; ss. steps.
+      iAssert (⌜_⌝)%I as "%".
+      { iApply (black_map_get with "A A1"). }
+      subst.
+      iApply isim_apc_both. iSplitR "A1".
+      { unfold inv_with. iSplits; ss. iLeft. iSplits; ss. iFrame. iSplits; ss. }
+      iIntros. iDes. clear_fast. steps. iIntros. iDes.
+      iModIntro. iFrame. iSplits; ss.
     }
-    econs; ss.
-    {
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-      unfold MapM.getF, MapA.getF, ccallU, ccallN.
-      harg. fold wf. destruct x. ss.
-      mDesAll; des; clarify.
-      mDesOr "INVS".
-      2:{ mDesAll. mAssertPure False; ss. iApply (initial_map_no_points_to with "INVS A1"). }
-      mDesAll. des; subst.
-      mAssertPure (0 ≤ z < a0)%Z.
-      { iApply (unallocated_range with "A2 A1"); eauto. }
-      mAssertPure _.
-      { iApply (black_map_get with "A3 A1"). }
-      subst. steps.
-      harg_tgt.
-      { iModIntro. iFrame. iSplits; et. xtra. }
-      steps. force_r; auto. steps.
-      (*** calling APC ***)
-      hAPC _.
-      { iIntros "A"; iDes. iSplitR "A2".
-        { iLeft. iExists _, _. iFrame. iSplits; auto. }
-        { iApply "A2". }
-      }
-      { auto. }
-      fold wf. steps.
-      hret _; ss.
-      { iModIntro.
-        iDestruct "Q" as "[CLOSED %]". subst. iFrame.
-        iDestruct "FR" as "[H0 H1]". iDestruct "H0" as "[H0 | H0]".
-        2:{ iDes. iPoseProof (initial_map_no_points_to with "H0 H1") as "H"; ss. }
-        iDestruct "H0" as (f0 sz0) "[[[% H2] H3] H4]". des; subst.
-        iFrame. iSplits; auto.
-        iLeft. iExists _, _. iFrame. iPureIntro. eauto.
-      }
-      { iDestruct "Q" as "[_ %]". subst. iPureIntro.
-        rr. esplits; eauto.
-      }
-    }
-
-    econs; ss.
-    {
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-      unfold MapM.setF, MapA.setF, ccallU, ccallN.
-      harg. fold wf. destruct x as [[? ?] ?]. ss.
-      mDesAll; des; clarify.
-      mDesOr "INVS".
-      2:{ mDesAll. mAssertPure False; ss. iApply (initial_map_no_points_to with "INVS A1"). }
-      mDesAll. des; subst.
-      mAssertPure (0 ≤ z < a0)%Z.
-      { iApply (unallocated_range with "A2 A1"); eauto. }
+    econs; [|ss].
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { typeclasses eauto. }
+      unfold MapM.setF, MapA.setF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
+      iIntros. iDes. unfold inv_with. iDes.
+      2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
+      des; subst. iFrame. iModIntro. iSplits; ss; et.
       steps.
-      mAssert _ with "A3 A1".
-      { iApply (black_map_set with "A3 A1"). }
-      mUpd "A4". mDesAll.
-      harg_tgt.
-      { iModIntro. iFrame. iSplits; et. xtra. }
-      steps. force_r; auto. steps.
-      (*** calling APC ***)
-      hAPC _.
-      { iIntros "A"; iDes. iSplitR "A".
-        { iLeft. iExists _, _. iFrame. iSplits; eauto. }
-        { iApply "A". }
-      }
-      { auto. }
-      fold wf. steps.
-      hret _; ss.
-      { iModIntro.
-        iDestruct "Q" as "[CLOSED %]". subst. iFrame.
-        iDestruct "FR" as "[H0 H1]". iDestruct "H0" as "[H0 | H0]".
-        2:{ iDes. iPoseProof (initial_map_no_points_to with "H0 H1") as "H"; ss. }
-        iDestruct "H0" as (f0 sz0) "[[[% H2] H3] H4]". des; subst.
-        iFrame. iSplits; auto.
-        iLeft. iExists _, _. iFrame. iPureIntro. eauto.
-      }
-      { iDestruct "Q" as "[_ %]". subst. iPureIntro.
-        rr. esplits; eauto.
-      }
+      iAssert (⌜(0 ≤ x_src2 < sz)%Z⌝)%I as "%".
+      { iApply (unallocated_range with "[A3]"); eauto. }
+      force_r; ss. steps.
+      iAssert (_)%I with "[A A1]" as "A".
+      { iApply (black_map_set with "A A1"). }
+      iMod "A". iDes.
+      iApply isim_apc_both. iSplitR "A0".
+      { unfold inv_with. iSplits; ss. iLeft. iSplits; ss. iFrame. iSplits; ss. }
+      iIntros. iDes. clear_fast. steps. iIntros. iDes.
+      iModIntro. iFrame. iSplits; ss.
     }
-    econs; ss.
-    {
-      init.
-      rename mp_tgt into mpr_tgt.
-      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
-                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
-      { inv WF. esplits; et. } des; clarify.
-      (*** init ***)
-      unfold MapM.set_by_userF, MapA.set_by_userF, ccallU, ccallN.
-      harg. fold wf. destruct x. ss.
-      mDesOr "INVS".
-      2:{ mDesAll. mAssertPure False; ss. iApply (initial_map_no_points_to with "INVS A1"). }
-      mDesAll. des; subst. steps.
-      harg_tgt.
-      { iModIntro. iFrame. iSplits; et. xtra. }
-      steps. rewrite _UNWRAPU. rewrite STB_set. steps.
-      rewrite STB_setM in *. clarify. hcall _ _.
-      { instantiate (1:=(_, _, _)). ss. iModIntro.
-        iSplits; ss. iDes. iFrame. iSplits; ss; eauto.
-        { instantiate (1:=True%I). iSplit; ss. iLeft.
-          iExists _, _. iFrame. iPureIntro. eauto.
-        }
-      }
-      { i. ss. iIntros "H". iDes. subst. eauto. }
-      ss. mDesAll. subst.
-      hpost_tgt.
-      { iModIntro. iFrame. iSplits; ss; et. xtra. }
-      steps. hret _; ss.
-      { iModIntro.
-        iDestruct "Q" as "[CLOSED %]". subst. iFrame.
-        iDestruct "FR" as "[H0 H1]". iDestruct "H1" as "[H1 | H1]".
-        2:{ iDes. iPoseProof (initial_map_no_points_to with "H1 H0") as "H"; ss. }
-        iDestruct "H1" as (f0 sz0) "[[[% H2] H3] H4]". des; subst.
-        iSplitR "H0"; eauto. iLeft. iExists _, _. iFrame. iPureIntro. eauto.
-      }
-      { iDestruct "Q" as "[_ %]". subst. iPureIntro.
-        rr. esplits; eauto.
-      }
+    econs; [|ss].
+    { econs; r; ss. apply isim_fun_to_tgt; auto.
+      { typeclasses eauto. }
+      unfold MapM.set_by_userF, MapA.set_by_userF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
+      iIntros. iDes. subst. unfold inv_with. iDes.
+      2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
+      des; subst. iFrame. iModIntro. iSplits; ss; et.
+      steps.
+      iApply isim_syscall. iIntros. steps. iApply isim_call_impure; ss. iSplits; ss; et.
+      iIntros. iExists (_, _, _). iSplits; ss; et. iIntros. iDes. iSplitR "".
+      { unfold inv_with. iFrame. iSplits; ss; et. iLeft. iFrame. iSplits; ss; et. iFrame. iSplits; ss; et. }
+      iIntros. iDes. subst. iFrame. iSplits; ss; et. steps. iIntros. iDes. iModIntro.
+      unfold inv_with. iDes.
+      2:{ des; subst. iPoseProof (initial_map_no_points_to with "A1 A0") as "H"; ss. }
+      des; subst. iFrame. iSplitR "A0".
+      { iSplits; ss; et. iLeft. iFrame. iSplits; ss; et. iFrame. iSplits; ss; et. }
+      { iSplits; ss; et. }
     }
     Unshelve. all: ss.
   Qed.
