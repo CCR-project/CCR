@@ -92,10 +92,13 @@ Section SIM.
           (fuel: option Ord.t)
           (st_src: Any.t * itree hEs R_src)
           (st_tgt: Any.t * itree hEs R_tgt): iProp :=
-    iProp_intro (fun fmr => forall OwnT,
-                     gpaco10 (_hsim) (cpn10 _hsim) r g _ _ OwnT Q fmr fuel f_src f_tgt st_src st_tgt) _.
+    iProp_intro (fun fmr_src => forall OwnT (WF: URA.wf (fmr_src ⋅ OwnT)),
+                     gpaco10 (_hsim) (cpn10 _hsim) r g _ _ OwnT Q (fmr_src ⋅ OwnT) fuel f_src f_tgt st_src st_tgt) _.
   Next Obligation.
-    cbn. i. des. esplits. guclo hupdC_spec. econs; et. eapply URA.extends_updatable; et.
+    cbn. i. des. esplits. guclo hupdC_spec.
+    assert(URA.updatable (r1 ⋅ OwnT) (r0 ⋅ OwnT)).
+    { eapply URA.updatable_add; try refl. eapply URA.extends_updatable; et. }
+    econs; et. eapply H; eauto. eapply URA.updatable_wf; et.
   Qed.
 
   Definition isim
@@ -113,36 +116,49 @@ Section SIM.
         (ENTAIL: bi_entails
                    P
                    (isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt)))
-        (CUR: current_iProp fmr P)
+        (CUR: current_iProp fmr (Own OwnT ** P))
     :
       gpaco10 _hsim (cpn10 _hsim) r g _ _ OwnT Q fmr fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt).
   Proof.
+    eapply current_iProp_frame_own_rev in CUR. des.
     eapply current_iProp_entail in ENTAIL; eauto.
-    inv ENTAIL. unfold isim in IPROP. guclo hupdC_spec. econs; et.
+    inv ENTAIL. unfold isim in IPROP. guclo hupdC_spec. econs.
+    { eauto. }
+    { etrans; eauto. eapply URA.updatable_add; eauto. refl. }
+    exploit IPROP; eauto.
+    eapply URA.updatable_wf; try apply CUR; eauto. etrans; eauto. eapply URA.updatable_add; eauto. refl.
   Qed.
 
   Lemma isim_final
         R_src R_tgt (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         P r g fuel f_src f_tgt st_src st_tgt itr_src itr_tgt
         (SIM: forall fmr OwnT
-                     (CUR: current_iProp fmr P),
+                     (CUR: current_iProp fmr (Own OwnT ** P)),
             gpaco10 _hsim (cpn10 _hsim) r g _ _ OwnT Q fmr fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt))
     :
       bi_entails
         P
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt)).
   Proof.
-    uipropall. ii. eapply SIM. econs; eauto. refl.
+    rr. autorewrite with iprop. ii. eapply SIM. eapply current_iProp_frame_own; eauto.
+    eapply current_iProp_entail; cycle 1.
+    { iIntros "A". iIntros "B". iFrame. iAssumption. }
+    econs; eauto. refl.
   Qed.
 
   Lemma isim_current
         R_src R_tgt (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel fmr f_src f_tgt st_src st_tgt itr_src itr_tgt OwnT
-        (CUR: current_iProp fmr (isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt)))
+        (CUR: current_iProp fmr (Own OwnT ** isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt)))
     :
       gpaco10 _hsim (cpn10 _hsim) r g _ _ OwnT Q fmr fuel f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt).
   Proof.
-    inv CUR. guclo hupdC_spec. econs; et.
+    eapply current_iProp_frame_own_rev in CUR. des.
+    inv CUR1.
+    assert(URA.updatable fmr (r0 ⋅ OwnT)).
+    { etrans; eauto. eapply URA.updatable_add; eauto. refl. }
+    guclo hupdC_spec. econs; try apply IPROP; eauto.
+    { eapply URA.updatable_wf; [|apply H]; eauto. }
   Qed.
 
   Lemma isim_upd R_src R_tgt
@@ -156,8 +172,8 @@ Section SIM.
     red. unfold Entails. autorewrite with iprop.
     unfold isim in *. i.
     rr in H. unfold bi_bupd_bupd in H. ss. unfold Upd in H. autorewrite with iprop in H.
-    des. guclo hmonoC_spec. econs; auto.
-    guclo hupdC_spec. econs; eauto.
+    des. i. guclo hmonoC_spec. econs; auto.
+    guclo hupdC_spec. econs; eauto. eapply URA.updatable_add; eauto. refl.
   Qed.
 
   Lemma isim_mono R_src R_tgt
@@ -189,14 +205,16 @@ Section SIM.
     red. unfold Entails. autorewrite with iprop.
     unfold isim, isim' in *. rr. i.
     rr in H. unfold Sepconj in H. autorewrite with iprop in H. ss.
-    des. clarify. eapply from_semantic in H0.
-    { guclo hframeC_aux_spec. econs; eauto.
-      { rewrite URA.add_comm. refl. }
-      guclo hmonoC_spec. econs; eauto.
-      i. iIntros "H0". iModIntro. iIntros "H1".
-      iPoseProof (H0 with "H1") as "H1".
-      iModIntro. iApply "H1"; eauto.
-    }
+    des. clarify. specialize (H1 OwnT).
+    guclo hframeC_aux_spec. econs; eauto.
+    { instantiate (1:=a). instantiate (1:=b ⋅ OwnT).
+      replace (a ⋅ b ⋅ OwnT) with (b ⋅ OwnT ⋅ a) by r_solve; refl. }
+    eapply from_semantic in H0.
+    guclo hmonoC_spec. econs.
+    { eapply H1. eapply URA.wf_mon; eauto. replace (a ⋅ b ⋅ OwnT) with (b ⋅ OwnT ⋅ a) in WF0 by r_solve. et. }
+    i. iIntros "H0". iModIntro. iIntros "H1".
+    iPoseProof (H0 with "H1") as "H1".
+    iModIntro. iApply "H1"; eauto.
   Qed.
 
   Lemma isim_bind R_src R_tgt S_src S_tgt
@@ -213,9 +231,13 @@ Section SIM.
     guclo hbindC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
-    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    uipropall. des. subst. guclo hupdC_spec.
+    assert(URA.updatable (a ⋅ b) (b ⋅ OwnT0)).
+    { rewrite URA.add_comm. eapply URA.updatable_add; try refl.
+      eapply URA.extends_updatable; eauto. }
+    econs; eauto; try apply IPROP1.
     { eapply URA.updatable_wf; et. }
-    { eapply URA.extends_updatable. exists a; r_solve. }
+    { eapply URA.updatable_wf; et. etrans; eauto. }
   Qed.
 
   Lemma isim_bind_left R_src R_tgt S_src
@@ -262,9 +284,13 @@ Section SIM.
     guclo hbind_rightC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
-    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    uipropall. des. subst. guclo hupdC_spec.
+    assert(URA.updatable (a ⋅ b) (b ⋅ OwnT0)).
+    { rewrite URA.add_comm. eapply URA.updatable_add; try refl.
+      eapply URA.extends_updatable; eauto. }
+    econs; eauto; try apply IPROP1.
     { eapply URA.updatable_wf; et. }
-    { eapply URA.extends_updatable. exists a; r_solve. }
+    { eapply URA.updatable_wf; et. etrans; et. }
   Qed.
 
   Lemma isim_split_aux R_src R_tgt S_tgt
@@ -281,9 +307,13 @@ Section SIM.
     guclo hsplitC_spec. econs.
     { eapply H; eauto. }
     i. inv POST. guclo hupdC_spec. econs; et.
-    uipropall. des. subst. guclo hupdC_spec. econs; eauto.
+    uipropall. des. subst.
+    assert(URA.updatable (a ⋅ b) (b ⋅ OwnT0)).
+    { rewrite URA.add_comm. eapply URA.updatable_add; try refl.
+      eapply URA.extends_updatable; eauto. }
+    guclo hupdC_spec. econs; try apply IPROP1; eauto.
     { eapply URA.updatable_wf; et. }
-    { eapply URA.extends_updatable. exists a; r_solve. }
+    { eapply URA.updatable_wf; et. etrans; et. }
   Qed.
 
   Lemma isim_call_impure
@@ -294,9 +324,9 @@ Section SIM.
         fsp_src fsp_tgt
         (SPECS: stb_src fn = Some fsp_src)
         (SPECT: stb_tgt fn = Some fsp_tgt)
-        tbr
-        (TBR: tbr = is_pure (fsp_src.(measure) x))
-        (MEASURE: ord_lt (fsp.(measure) x) o_src)
+        (* tbr *)
+        (* (TBR: tbr = is_pure (fsp_src.(measure) x)) *)
+        (* (MEASURE: ord_lt (fsp.(measure) x) o_src) *)
     :
       bi_entails
         (
@@ -307,7 +337,8 @@ Section SIM.
           (*          -* {{"POST": (Q_src ret_src ret_tgt: iProp)}} *)
           (*          -* isim (g, g, true, true) Q None (st_src, ktr_src ret_src) (st_tgt, ktr_tgt ret_tgt)) *)
           ∀ (x_tgt: fsp_tgt.(meta)), ∃ (x_src: fsp_src.(meta)),
-            (fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt)
+            (⌜measure fsp_src x_src = ord_top⌝) ∧
+            ((fsp_tgt.(precond) (Some mn) x_tgt arg_tgt arg_tgt)
               -* ((inv_with le I w0 st_src st_tgt ∗ fsp_src.(precond) (Some mn) x_src arg_src arg_tgt)
                     ∗ (∀ st_src st_tgt ret_src ret_tgt,
                           {{"INV": inv_with le I w0 st_src st_tgt}}
@@ -315,8 +346,7 @@ Section SIM.
                             -* (((fsp_tgt.(postcond) (Some mn) x_tgt ret_tgt ret_tgt))
                                   ∗ isim (g, g, true, true) Q None (st_src, ktr_src ret_src)
                                   (st_tgt, ktr_tgt ret_tgt))
-                      )
-                 )
+                      )))
         )
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Call fn arg_src) >>= ktr_src)
               (st_tgt, trigger (Call fn arg_tgt) >>= ktr_tgt)).
@@ -330,7 +360,13 @@ Section SIM.
     { econs; eauto. refl. }
     apply current_iPropL_convert in CUR. mDesAll.
     ired_both. gstep. econs; eauto.
-    { i. esplits;
+    { i. mSpcUniv "H" with x_tgt. mDesAll.
+      esplits; eauto.
+      - eapply current_iProp_frame_own; eauto. eapply current_iProp_entail; eauto. start_ipm_proof.
+        iIntros; iFrame.
+        iIntros "A". iDestruct ("H" with "A") as "[[A B] C]". iFrame.
+        iModIntro.
+        iSplitR "B"; eauto. admit "". iApply "B".
     }
     { mAssert _ with "A1".
       { iApply (PRE with "A1"). }
