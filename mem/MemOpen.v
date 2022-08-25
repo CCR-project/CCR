@@ -30,12 +30,12 @@ Section TUNNEL.
     mk_fspec (fun x => match x with | Some x => (fst ∘ fst ∘ DPQ) x | _ => ord_top end)
              (fun _ x y a =>
                 match x with
-                | Some x => (((snd ∘ fst ∘ DPQ) x a: iProp))%I
+                | Some x => (((snd ∘ fst ∘ DPQ) x a ∗ ⌜y = a⌝))%I
                 | _ => ⌜y = a⌝%I: iProp
                 end)
              (fun _ x z a =>
                 match x with
-                | Some x => (((snd ∘ DPQ) x a: iProp))%I
+                | Some x => (((snd ∘ DPQ) x a ∗ ⌜z = a⌝))%I
                 | _ => ⌜z = a⌝%I: iProp
                 end)
   .

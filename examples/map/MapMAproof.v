@@ -17,7 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 
 Require Import HTactics2 HSim2 ISim2 ProofMode IProofMode2 STB Invariant.
-Require Import Mem1.
+Require Import Mem1 MemOpen.
 
 Set Implicit Arguments.
 
@@ -146,13 +146,18 @@ Section SIMMODSEM.
           (fun _ st_src st_tgt =>
              ((∃ f sz, ⌜st_src = f↑ /\ st_tgt = (f, sz)↑⌝ ** black_map f ** unallocated sz ** pending1) ∨ (initial_map ** ⌜st_src = (fun (_: Z) => 0%Z)↑ /\ st_tgt = (fun (_: Z) => 0%Z, 0%Z)↑⌝))%I).
 
-  Variable GlobalStbM: Sk.t -> gname -> option fspec.
-  Hypothesis STB_setM: forall sk, (GlobalStbM sk) "set" = Some set_specM.
+  Let GlobalStb: (Sk.t → string → option fspec) := fun _ => to_stb (MemStb ++ MapStb).
+  Let GlobalStbM: (Sk.t → string → option fspec) := fun _ => to_stb (MemStb ++ MapStbM).
+  Hint Unfold GlobalStb: stb. 
+  Hint Unfold GlobalStbM: stb.
 
-  Variable GlobalStb: Sk.t -> gname -> option fspec.
-  Hypothesis STB_set: forall sk, (GlobalStb sk) "set" = Some set_spec.
+  (* Variable GlobalStbM: Sk.t -> gname -> option fspec. *)
+  (* Hypothesis STB_setM: forall sk, (GlobalStbM sk) "set" = Some set_specM. *)
 
-  Hypothesis PUREINCL: forall sk, stb_pure_incl (GlobalStbM sk) (GlobalStb sk).
+  (* Variable GlobalStb: Sk.t -> gname -> option fspec. *)
+  (* Hypothesis STB_set: forall sk, (GlobalStb sk) "set" = Some set_spec. *)
+
+  (* Hypothesis PUREINCL: forall sk, stb_pure_incl (GlobalStbM sk) (GlobalStb sk). *)
 
   Lemma pending1_unique:
     pending1 -∗ pending1 -∗ False%I.
@@ -171,8 +176,7 @@ Section SIMMODSEM.
          eapply to_semantic. iIntros "H". iRight; eauto. }
     Local Opaque initial_map black_map map_points_to unallocated.
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; eauto.
-      { (** TODO: can we remove this? it should be automatic **) typeclasses eauto. }
+    { econs; r; ss. startproof.
       cbn. unfold MapM.initF, MapA.initF, cfunN, cfunU, ccallN, ccallU. cbn.
       i. esplits; ss. i.
       iIntros. iDes. subst. unfold pending. iDes. iFrame. unfold inv_with. iDes.
@@ -184,8 +188,7 @@ Section SIMMODSEM.
       iIntros. iDes. steps. iIntros. iDes. iModIntro. iFrame.
     }
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { typeclasses eauto. }
+    { econs; r; ss. startproof.
       unfold MapM.getF, MapA.getF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
       iIntros. iDes. unfold inv_with. iDes.
       2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
@@ -203,8 +206,7 @@ Section SIMMODSEM.
       iModIntro. iFrame. iSplits; ss.
     }
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { typeclasses eauto. }
+    { econs; r; ss. startproof.
       unfold MapM.setF, MapA.setF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
       iIntros. iDes. unfold inv_with. iDes.
       2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
@@ -222,14 +224,13 @@ Section SIMMODSEM.
       iModIntro. iFrame. iSplits; ss.
     }
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { typeclasses eauto. }
+    { econs; r; ss. startproof.
       unfold MapM.set_by_userF, MapA.set_by_userF, ccallU, ccallN. cbn. i. esplits; ss. { des_ifs. } steps.
       iIntros. iDes. subst. unfold inv_with. iDes.
       2:{ iExFalso; ss. iApply (initial_map_no_points_to with "A A1"). }
       des; subst. iFrame. iModIntro. iSplits; ss; et.
       steps.
-      iApply isim_syscall. iIntros. steps. iApply isim_call_impure; ss. iSplits; ss; et.
+      iApply isim_syscall. iIntros. steps. iSplits; ss; et.
       iIntros. iExists (_, _, _). iSplits; ss; et. iIntros. iDes. iSplitR "".
       { unfold inv_with. iFrame. iSplits; ss; et. iLeft. iFrame. iSplits; ss; et. iFrame. iSplits; ss; et. }
       iIntros. iDes. subst. iFrame. iSplits; ss; et. steps. iIntros. iDes. iModIntro.

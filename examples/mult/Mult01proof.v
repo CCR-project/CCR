@@ -49,17 +49,13 @@ Section SIMMODSEM.
       eapply to_semantic. iIntros "H". iSplits; ss. }
 
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { econs; eauto. }
-      unfold cfunN, cfunU, ccallN, ccallU. ss.
+    { econs; r; ss. startproof.
       i. esplits; eauto.
       iIntros. iDes. iModIntro. iFrame. iSplits; ss. steps. iIntros. iDes. subst. iFrame; ss.
     }
 
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { econs; eauto. }
-      unfold cfunN, cfunU, ccallN, ccallU. ss.
+    { econs; r; ss. startproof.
       i. esplits; eauto.
       iIntros. iDes. iFrame. iSplits; ss. iDestruct (OwnM_Upd with "A0") as ">A0".
       { eapply f01_update. }
@@ -73,9 +69,7 @@ Section SIMMODSEM.
     }
 
     econs; [|ss].
-    { econs; r; ss. apply isim_fun_to_tgt; auto.
-      { econs; eauto. }
-      unfold cfunN, cfunU, ccallN, ccallU. ss.
+    { econs; r; ss. startproof.
       i. esplits; eauto.
       iIntros. iDes. iFrame. iModIntro. iSplits; ss. steps.
       iApply isim_apc_both. iFrame. iIntros.

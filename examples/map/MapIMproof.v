@@ -302,8 +302,8 @@ Section SIMMODSEM.
         { eapply STBINCLM. stb_tac. ss. }
         { eapply OrdArith.lt_from_nat. instantiate (1:=n). lia. }
         icall_open (Some (_, _, _)) with "A1".
-        { iModIntro. iExists _. iFrame. iPureIntro. rewrite Z.div_mul; ss.
-          f_equal. f_equal. f_equal. lia.
+        { iModIntro. iSplits; iFrame; iSplits; ss. iPureIntro.
+          rewrite Z.div_mul; ss. f_equal. f_equal. f_equal. lia.
         }
         { ss. }
         steps. mDesAll. subst. steps.
@@ -352,7 +352,7 @@ Section SIMMODSEM.
       replace ((a0 + (z * 8) `div` 8)%Z) with ((a0 + Z.to_nat z)%Z); auto.
       2:{ rewrite Z_div_mult; ss. lia. }
       icall_open _ with "A1".
-      { iModIntro. instantiate (1:=Some (_, _, _)). ss. iExists _. iSplit; eauto. }
+      { iModIntro. instantiate (1:=Some (_, _, _)). ss. iSplits; eauto. }
       { ss. }
       ss. mDesAll. subst. steps. astop. steps.
       iret _; ss. iModIntro. iSplit; ss.

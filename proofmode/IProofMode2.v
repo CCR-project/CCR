@@ -378,3 +378,35 @@ Ltac steps :=
 Goal let (a, b) := (1, 0) in a = 1. simpl. Abort.
 Goal forall (x: nat * nat), let (a, b) := x in a = 1. i. des_pairs. Abort.
 Goal forall (x: nat * nat), (let (a, b) := x in a = 1) -> False. i. des_pairs. Abort.
+
+Ltac des_eqs :=
+  repeat match goal with
+         | |- context[?x ?[ ?t ] ?y] =>
+             let name := fresh "EQ" in
+             destruct (x ?[ t ] y) eqn:name;
+             [apply rel_dec_correct in name; clarify|clear name]
+         | [H: context[?x ?[ ?t ] ?y] |- _] =>
+             let name := fresh "EQ" in
+             destruct (x ?[ t ] y) eqn:name;
+             [apply rel_dec_correct in name; try (injection H; clear H; i); clarify|clear name]
+         end.
+
+Ltac startproof :=
+  apply isim_fun_to_tgt;
+  [typeclasses eauto
+  |autounfold with stb in *; autorewrite with stb in *; cbn; i; des_eqs; econs;
+   cbn; i; des_ifs; iIntros; iDes; des; eauto
+  |cbn; autounfold with stb in *; autorewrite with stb in *;
+   match goal with
+   | |- context[_ = Some ?x] =>
+       repeat multimatch goal with
+              | |- context[(?y, ?z)] => match z with | x => exists y end
+              end
+   end;
+   refl
+  |cbn; autounfold with stb in *; autorewrite with stb in *; ii; ss; des_eqs;
+   match goal with
+   | [H: is_possibly_pure _ |- _] => rr in H; des; ss
+   end
+  |cbn; unfold cfunN, cfunU, ccallN, ccallU; cbn
+  ].

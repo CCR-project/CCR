@@ -389,7 +389,7 @@ Proof Outline
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a2 into v. rename WF into SIMWF.
+        rename a into v. rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
@@ -561,7 +561,7 @@ Proof Outline
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a2 into v0. rename WF into SIMWF.
+        rename a into v0. rename WF into SIMWF.
         steps.
         mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v0)).

@@ -1757,6 +1757,9 @@ Section ADEQUACY.
         (fsp_src fsp_tgt: fspecbody) x y st_src st_tgt
         (EQ: x = y)
         (WF: mk_wf wf w (st_src, st_tgt))
+        (SIMPL: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt)
+        (PUREINCL: stb_pure_incl stb_tgt stb_src)
+        (SIMPL2: forall mn x vret vret_tgt, ⊢ postcond fsp_tgt mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure fsp_tgt x_tgt) (measure fsp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
@@ -1793,7 +1796,6 @@ Section ADEQUACY.
       iFrame.
     }
     i. gfinal. right. eapply hsim_adequacy; auto.
-    { admit "ez - stb-pure-incl". }
     ginit. { eapply cpn10_wcompat; eauto with paco. }
     eapply isim_init; eauto.
     { eapply current_iProp_entail; et. start_ipm_proof. iSplitR "FR"; try iAssumption. iSplitL "TF"; eauto. }
@@ -1802,6 +1804,9 @@ Section ADEQUACY.
   Lemma isim_fun_to_tgt
         wf mn stb_src stb_tgt
         (fsp_src fsp_tgt: fspecbody)
+        (SIMPL: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt)
+        (SIMPL2: (exists fn, stb_tgt fn = Some (fsp_tgt.(fsb_fspec))))
+        (PUREINCL: stb_pure_incl stb_tgt stb_src)
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure fsp_tgt x_tgt) (measure fsp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
@@ -1825,11 +1830,15 @@ Section ADEQUACY.
       sim_fsem (mk_wf wf) le (fun_to_tgt mn stb_src fsp_src) (fun_to_tgt mn stb_tgt fsp_tgt).
   Proof.
     ii. eapply isim_fun_to_tgt_aux; eauto.
+    { des. - i. eapply SIMPL; eauto. }
   Qed.
 
   Lemma isim_fun_to_tgt_open
         wf mn stb_src stb_tgt
         (ksp_src ksp_tgt: kspecbody)
+        (SIMPL: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt)
+        (SIMPL2: (exists fn, stb_tgt fn = Some (ksp_tgt.(ksb_fspec))))
+        (PUREINCL: stb_pure_incl stb_tgt stb_src)
         (ISIM: forall x_src, exists x_tgt,
             (<<OLE: ord_le (measure ksp_tgt x_tgt) (measure ksp_src x_src)>>) /\
             forall w mn_caller arg_src arg_tgt st_src st_tgt,
@@ -1867,7 +1876,7 @@ Section ADEQUACY.
     apply sim_itreeC_spec. apply sim_itreeC_take_src. intros b.
     apply sim_itreeC_spec. apply sim_itreeC_take_tgt. exists b.
     destruct b.
-    { gfinal. right. eapply isim_fun_to_tgt_aux; eauto. }
+    { gfinal. right. eapply isim_fun_to_tgt_aux; eauto. ss. des. eapply SIMPL; eauto. }
     { gfinal. right. eapply isim_fun_to_tgt_aux; eauto. i. ss. exists tt. esplits; eauto.
       i. iIntros "[H0 %]". subst. iSplits; ss. iDestruct (CONTEXT with "H0") as ">H0".
       iModIntro. iSplits; et. iApply isim_wand; eauto. iFrame. eauto.
@@ -1877,6 +1886,9 @@ Section ADEQUACY.
   Lemma isim_fun_to_tgt_open_trivial
         wf mn stb_src stb_tgt
         body_src body_tgt
+        (SIMPL: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt)
+        (SIMPL2: (exists fn, stb_tgt fn = Some (fspec_trivial)))
+        (PUREINCL: stb_pure_incl stb_tgt stb_src)
         (CONTEXT: forall w mn_caller arg st_src st_tgt,
               (inv_with le wf w st_src st_tgt) ==∗
               (isim

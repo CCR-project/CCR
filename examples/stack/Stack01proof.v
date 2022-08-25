@@ -65,11 +65,6 @@ Section SIMMODSEM.
     end
   .
 
-  Ltac acatch :=
-    match goal with
-    | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
-      astep fn (tt↑)
-    end.
 
   Theorem sim_modsem: ModSemPair.sim (Stack1.StackSem global_stb) Stack0.StackSem.
   Proof.

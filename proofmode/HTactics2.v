@@ -25,14 +25,18 @@ Set Implicit Arguments.
 Section AUX.
   Context `{Σ: GRA.t}.
 
-  Lemma wf_extends
-        (x0 x1: Σ)
-        (WF: URA.wf x0)
-        (EXT: URA.extends x1 x0)
-    :
-      <<WF: URA.wf x1>>
+  Variant is_simple (fsp: fspec): Prop :=
+  | is_simple_intro
+      (PRE: forall mn x varg varg_tgt, ⊢ fsp.(precond) mn x varg varg_tgt -* ⌜varg = varg_tgt⌝)
+      (POST: forall mn x vret vret_tgt, ⊢ fsp.(postcond) mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
   .
-  Proof. r in EXT. des; clarify. eapply URA.wf_mon; et. Qed.
+
+  Lemma mk_simple_is_simple: forall X DPQ, is_simple (mk_simple (X:=X) DPQ).
+  Proof.
+    i. econs; ss.
+    - i. iIntros "[H %]". ss.
+    - i. iIntros "[H %]". ss.
+  Qed.
 End AUX.
 
 
@@ -187,6 +191,15 @@ Section MODE.
     uipropall. ss. i. eapply iProp_mono; et.
   Qed.
 
+  (*** TODO: move to IPM.v ***)
+  Lemma to_semantic_pure: forall (P: Prop), (bi_emp_valid ((⌜P⌝)%I: iProp)) -> P.
+  Proof.
+    i. rr in H. uipropall. exploit (H ε); eauto.
+    { eapply URA.wf_unit. }
+    { rr. uipropall. }
+    { i. rr in x0. uipropall. }
+  Qed.
+
   Lemma hcall_clo2
         (fsp_src: fspec)
 
@@ -197,6 +210,7 @@ Section MODE.
         (fsp_tgt: fspec)
         mr_tgt0 mp_tgt0 k_tgt k_src
         fn tbr_src tbr_tgt o_src o_tgt arg_src arg_tgt
+        (SIMPLE: is_simple fsp_tgt)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
@@ -253,7 +267,7 @@ Section MODE.
     { iStopProof. eapply from_semantic; eauto. }
     mAssert (#=> _) with "A A3".
     { assert(x1 = arg_tgt).
-      { admit "simple". }
+      { sym. mAssertPure _; [|eassumption]. inv SIMPLE. iApply PRE; eauto. }
       subst.
       iSpecialize ("A" with "A3").
       iMod "A". iModIntro. iAssumption.
@@ -313,7 +327,6 @@ Section MODE.
     steps.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists ret_tgt.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; et.
-    (* { admit "simple". } *)
     steps.
     eapply SIM.
     econs; et; cycle 1.
@@ -337,6 +350,7 @@ Section MODE.
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
+        (SIMPL: forall mn x vret vret_tgt, ⊢ Qt mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
 
         fr_src fr_tgt
 
@@ -368,7 +382,7 @@ Section MODE.
     mAssert _ with "A2".
     { iStopProof. eapply from_semantic; eauto. }
     assert(x = vret_tgt).
-    { admit "simple". }
+    { sym. mAssertPure _; [|eassumption]. iApply SIMPL; et. }
     subst.
     mAssert (#=> _) with "A A4".
     { iSpecialize ("A" with "A4"). iAssumption. }
@@ -428,6 +442,19 @@ Section MODE.
     forall fn fsp (FIND: stb_tgt fn = Some fsp) (PURE: is_possibly_pure fsp), stb_src fn = Some fsp
   .
 
+  (*** TODO: stb_pure_incl is too strong. we should use stb_pure_incl2 instead ***)
+  Definition stb_pure_incl2 (stb_tgt stb_src: string -> option fspec): Prop :=
+    forall fn fsp_tgt (FIND: stb_tgt fn = Some fsp_tgt) x_tgt (PURE: is_pure (fsp_tgt.(measure) x_tgt)),
+      exists fsp_src x_src, (<<FIND: stb_src fn = Some fsp_src>>) /\
+                              (<<PURE: is_pure (fsp_src.(measure) x_src)>>) /\
+                              (<<PRE: forall mn arg_src arg_tgt,
+                                  fsp_src.(precond) mn x_src arg_src arg_tgt ==∗
+                                                    fsp_tgt.(precond) mn x_tgt arg_src arg_tgt>>) /\
+                              (<<POST: forall mn ret_src ret_tgt,
+                                  fsp_tgt.(postcond) mn x_tgt ret_src ret_tgt ==∗
+                                                    fsp_src.(postcond) mn x_src ret_src ret_tgt>>)
+  .
+
   Local Transparent HoareCall.
 
   Definition ord_le (o0 o1: ord): Prop :=
@@ -455,22 +482,15 @@ Section MODE.
 
         fr_src0 fr_tgt0
 
-        (* (WF: mk_wf R a0 ((Any.pair mp_src0 mr_src0↑), (Any.pair mp_tgt0 mr_tgt0↑))) *)
-
-        (* ips Xtra *)
-        (* (ACC: current_iPropL ctx0 ips) *)
-        (* (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))) *)
         FR
         (ACC: current_iPropL (fr_src0 ⋅ (mr_tgt0 ⋅ mr_src0))
                              [("TM", Own mr_tgt0); ("TF", Own fr_tgt0);
                               ("I", (∃ a1, R a1 mp_src0 mp_tgt0 ** ⌜le a0 a1⌝)%I); ("FR", FR)])
-        (* (WFA: forall a1 mp_src1 mp_tgt1 (mr_src1 mr_tgt1: Σ) (INV: I mr_src1), *)
-        (*     mk_wf R a1 ((Any.pair mp_src1 mr_src1↑), (Any.pair mp_tgt1 mr_tgt1↑))) *)
-
-
         stb_src stb_tgt o_src o_tgt
         (LE: ord_le o_tgt o_src)
         (STBINCL: stb_pure_incl stb_tgt stb_src)
+        (SIMPL: forall fn fsp_tgt (IN: stb_tgt fn = Some fsp_tgt), is_simple fsp_tgt)
+        (*** TODO: we should be able to remove the above condition. ***)
         (ARG: forall
             (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t)
             fr_src1 fr_tgt1
@@ -513,11 +533,11 @@ Section MODE.
           iIntros "[A [B [C [D _]]]]". iFrame. iIntros "H". iFrame. iModIntro.
           iSplitL "D"; try iAssumption. iSplits; eauto. }
         i.
-        assert(ret_tgt = ret_src).
-        { admit "simple". }
-        subst.
         esplits; eauto.
-        { iIntros "[[A B] C]". iFrame. iCombine "A B" as "A". eauto. }
+        { iIntros "[[A B] C]".
+          iAssert (⌜ret_src = ret_tgt⌝)%I as "%".
+          { exploit SIMPL; eauto. intro T. inv T. iApply POST; et. }
+          subst. iFrame. iCombine "A B" as "A". eauto. }
         i. steps.
         move CIH at bottom.
         deflag. gbase. mDesAll. eapply (CIH); et.

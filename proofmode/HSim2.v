@@ -27,29 +27,6 @@ Ltac ired_both := ired_l; ired_r.
 Section FSP.
 
   Context `{Σ: GRA.t}.
-  Variant is_simple (fsp: fspec): Prop :=
-  | is_simple_intro
-      (PRE: forall mn x varg varg_tgt, ⊢ fsp.(precond) mn x varg varg_tgt -* ⌜varg = varg_tgt⌝)
-      (POST: forall mn x vret vret_tgt, ⊢ fsp.(postcond) mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
-  .
-
-  Lemma mk_simple_is_simple: forall X DPQ, is_simple (mk_simple (X:=X) DPQ).
-  Proof.
-    i. econs; ss.
-    - i. iIntros "[H %]". ss.
-    - i. iIntros "[H %]". ss.
-  Qed.
-
-  (* Definition is_possibly_pure (fsp: fspec): Prop := exists x, is_pure (fsp.(measure) x). *)
-
-  (* Definition stb_pure_incl (stb_tgt stb_src: string -> option fspec): Prop := *)
-  (*   (* forall fn fsp (FIND: stb_tgt fn = Some fsp) (PURE: is_possibly_pure fsp), stb_src fn = Some fsp *) *)
-  (*   forall fn fsp (FIND: stb_tgt fn = Some fsp) (PURE: is_possibly_pure fsp), is_some (stb_src fn) *)
-  (* . *)
-
-
-
-
 
   Lemma current_iProp_updatable (res0 res1: Σ) P
         (WF: URA.wf res1)
@@ -779,6 +756,7 @@ Section SIM.
     forall
       f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt (mr_src mr_tgt: Σ) fr_src fr_tgt
       X_src (x_src: X_src) X_tgt (x_tgt: X_tgt) Q_src Q_tgt mn_caller fuel w0
+      (SIMPL: forall mn x vret vret_tgt, ⊢ Q_tgt mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
       (SIM: hsim (fr_tgt ⋅ mr_tgt)
                  (fun st_src st_tgt ret_src ret_tgt =>
                     ((Q_tgt mn_caller x_tgt ret_tgt ret_tgt) ==∗
@@ -823,7 +801,7 @@ Section SIM.
           eapply current_iProp_entail in PRE; eauto. iIntros "[[[A B] C] _]". iSplitL; eauto. iFrame.
         }
         { i. ss. exploit POST; eauto. i; des. esplits; eauto.
-          i. steps. gbase. hexploit CIH.
+          i. steps. gbase. hexploit CIH; eauto.
           { eapply SIM; eauto. eapply current_iProp_entail; [eauto|].
             iIntros "[A [B [C _]]]". iSplitL "B C"; eauto. iSplitL "B"; eauto. }
           i. ss.
@@ -836,7 +814,7 @@ Section SIM.
           replace (fr_src ⋅ mr_src ⋅ mr_tgt) with (fr_src ⋅ (mr_tgt ⋅ mr_src)) by r_solve. eauto.
           eapply current_iProp_entail in PRE; eauto. iIntros "[[[A B] C] _]". iSplitL; eauto. iFrame. }
         { i. ss. exploit POST; eauto. i; des. esplits; eauto.
-          i. steps. gbase. hexploit CIH.
+          i. steps. gbase. hexploit CIH; eauto.
           { eapply SIM; eauto. eapply current_iProp_entail; [eauto|].
             iIntros "[A [B [C _]]]". iSplitL "B C"; eauto. iSplitL "B"; eauto. }
           i. ss.
@@ -882,7 +860,7 @@ Section SIM.
         eapply current_iProp_entail; eauto.
         iIntros "[[A B] C]". iFrame.
       }
-      i. exploit POST; eauto. i; des. esplits; eauto. i. steps. gbase. hexploit CIH.
+      i. exploit POST; eauto. i; des. esplits; eauto. i. steps. gbase. hexploit CIH; eauto.
       { eapply SIM; eauto. eapply current_iProp_entail; [eauto|].
         iIntros "[A [B [C _]]]". iSplitL "B C"; eauto. iSplitL "B"; eauto. }
       i; ss.
@@ -895,9 +873,10 @@ Section SIM.
           instantiate (1:=FR). iFrame.
         + i. steps.
           gbase.
-          hexploit CIH.
+          hexploit CIH; cycle 1.
           { eapply SIM. eapply current_iProp_entail; try apply ACC.
             iIntros "[A [B [C [D _]]]]". iFrame. iSplitL "B"; iFrame. }
+          2:{ eauto. }
           i; ss.
       - ss. steps. eapply hAPC2; ss.
         + eapply current_iProp_entail; eauto.
@@ -906,9 +885,10 @@ Section SIM.
           instantiate (1:=FR). iFrame.
         + i. steps.
           gbase.
-          hexploit CIH.
+          hexploit CIH; cycle 1.
           { eapply SIM. eapply current_iProp_entail; try apply ACC.
             iIntros "[A [B [C [D _]]]]". iFrame. iSplitL "B"; iFrame. }
+          2:{ eauto. }
           i; ss.
     }
     { destruct fuel; steps.
@@ -947,6 +927,7 @@ Section SIM.
     forall
       f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt
       mr_src mr_tgt fr_src fr_tgt X_src (x_src: X_src) X_tgt (x_tgt: X_tgt) Q_src Q_tgt mn_caller w0
+      (SIMPL: forall mn x vret vret_tgt, ⊢ Q_tgt mn x vret vret_tgt -* ⌜vret = vret_tgt⌝)
       (SIM: hsim (fr_tgt ⋅ mr_tgt)
                  (fun st_src st_tgt ret_src ret_tgt =>
                     ((Q_tgt mn_caller x_tgt ret_tgt ret_tgt) ==∗

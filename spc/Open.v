@@ -599,19 +599,19 @@ Section ADQ.
   Ltac list_tac := repeat _list_tac.
 
   Lemma my_lemma1_aux''
-        (ske: Sk.t) st0 (A: Type) (itr: itree Es A) (ctx: Σ)
+        (ske: Sk.t) st0 (A: Type) (itr: itree Es A) (fr: Σ)
         mn
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
-        (WF: URA.wf ctx)
+        (WF: URA.wf fr)
     :
       paco8
         (_sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2)
         bot8
         (Σ * A)%type A
-        (fun st_src st_tgt '(ctx, r_src) r_tgt =>
-           r_src = r_tgt /\ URA.wf ctx /\ st_src = Any.pair st_tgt (ε: Σ)↑)
+        (fun st_src st_tgt '(fr, r_src) r_tgt =>
+           r_src = r_tgt /\ URA.wf fr /\ st_src = Any.pair st_tgt (ε: Σ)↑)
         false false tt
-        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) ctx))
+        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) fr))
         (st0, addtau itr)
   .
   Proof.
@@ -644,9 +644,9 @@ Section ADQ.
       des_ifs. ss. list_tac. des_ifs. ss.
       Local Transparent HoareCall.
       unfold HoareCall, mput, mget. steps.
-      force_l. exists (ε, ε, ε). steps.
+      force_l. exists (fr, ε, ε). steps.
       force_l.
-      { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
+      { rewrite ! URA.unit_id. refl. }
       steps. force_l. exists None. steps.
       force_l. exists (args). steps.
       force_l.
@@ -655,11 +655,11 @@ Section ADQ.
       { split; et. }
       steps. rr in _ASSUME0. uipropall. subst. destruct w1.
       deflag. gbase. eapply CIH; et.
-      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
+      rewrite ! URA.unit_id in _ASSUME. rewrite ! URA.unit_id. ss.
     - unfold HoareCall, mput, mget. steps.
-      force_l. exists (ε, ε, ε). steps.
+      force_l. exists (fr, ε, ε). steps.
       force_l.
-      { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
+      { rewrite ! URA.unit_id. refl. }
       steps. force_l. exists None. steps.
       force_l. eexists (args). steps.
       force_l.
@@ -668,7 +668,7 @@ Section ADQ.
       { split; et. }
       steps. rr in _ASSUME0. uipropall. subst. destruct w1.
       deflag. gbase. eapply CIH; et.
-      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
+      rewrite ! URA.unit_id in _ASSUME. rewrite ! URA.unit_id. ss.
       Unshelve.
       all: try (exact Ord.O).
       all: try (exact 0%nat).
@@ -703,12 +703,12 @@ Section ADQ.
     guclo lbindC_spec. econs.
     { instantiate (1:=tt).
       deflag. gfinal. right. eapply my_lemma1_aux''; et.
-      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
+      eapply URA.wf_mon; et.
     }
     i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
-    force_l. eexists. force_l. eexists (_, _). steps.
+    force_l. eexists. force_l. eexists (_, _, _). steps.
     force_l.
-    { instantiate (1:=ε). instantiate (1:=ε). r_wf SIM0. }
+    { instantiate (1:=ε). instantiate (1:=ε). rewrite ! URA.unit_id. refl. }
     steps. force_l.
     { rr. destruct x; et; rr; uipropall. }
     steps.
@@ -1438,7 +1438,7 @@ Section ADQ.
 
   Lemma adequacy_open_aux2_hcall
     :
-      forall mp (mr: Σ) w mn o fsp fn arg ctx tbr,
+      forall mp (mr: Σ) w mn o fsp fn arg fr tbr,
         paco8 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
@@ -1448,9 +1448,9 @@ Section ADQ.
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
               false false w
               (Any.pair mp mr↑,
-                        HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) ctx)
+                        HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) fr)
               (Any.pair mp mr↑,
-                        HoareCall mn tbr o fsp fn arg ctx).
+                        HoareCall mn tbr o fsp fn arg fr).
   Proof.
     i. ginit.
     Local Transparent HoareCall. unfold HoareCall. Local Opaque HoareCall.
@@ -1461,7 +1461,7 @@ Section ADQ.
     { rr. uipropall. esplits; et. rr. uipropall. esplits; et. rr. uipropall. }
     steps. force_l; auto. steps. des; clarify.
     rewrite Any.pair_split in _UNWRAPU. clarify.
-    force_r. eexists (c2, c3). steps.
+    force_r. eexists (x1). steps.
     rewrite Any.upcast_downcast in *. clarify.
     force_r; auto. steps. force_r. eexists.
     force_r; et. steps. gstep. econs; et.
@@ -1469,7 +1469,7 @@ Section ADQ.
 
   Lemma adequacy_open_aux2_apc sk
     :
-      forall mp (mr: Σ) w mn o ctx,
+      forall mp (mr: Σ) w mn o fr,
         paco8 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
@@ -1482,17 +1482,17 @@ Section ADQ.
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
                         APC
-                        ctx)
+                        fr)
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb sk) o
                         APC
-                        ctx).
+                        fr).
   Proof.
     ginit. i.
     Local Transparent APC. unfold APC. Local Opaque APC.
     steps. force_l. exists x. steps. deflag.
-    revert x mp mr w mn o ctx. gcofix CIH. i.
+    revert x mp mr w mn o fr. gcofix CIH. i.
     rewrite unfold_APC. steps. force_l. exists x0. steps. destruct x0.
     { steps. gstep. econs; et. }
     steps. force_l. exists x0. steps. force_l; auto. steps.
@@ -1504,14 +1504,14 @@ Section ADQ.
       { ss. }
     }
     i. ss. des; clarify.
-    destruct vret_tgt as [ctx0 vret]. ired_both. steps.
+    destruct vret_tgt as [fr0 vret]. ired_both. steps.
     deflag. gbase. eapply CIH.
     Unshelve. all: try exact 0. all: ss.
   Qed.
 
   Lemma adequacy_open_aux2_itr sk
     :
-      forall R mp (mr: Σ) w mn o itr ctx,
+      forall R mp (mr: Σ) w mn o itr fr,
         paco8 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
@@ -1524,11 +1524,11 @@ Section ADQ.
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
                         (interp_hEs_tgt (KModSem.transl_itr_mid itr))
-                        ctx)
+                        fr)
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb sk) o (interp_hEs_tgt itr)
-                        ctx).
+                        fr).
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. gstep. econs; et. }
@@ -1541,7 +1541,7 @@ Section ADQ.
         { eapply adequacy_open_aux2_apc. }
         { ss. }
       }
-      i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
+      i. ss. des; clarify. destruct vret_tgt as [fr0 vret].
       steps. deflag. gbase. eapply CIH.
     }
     destruct e.
@@ -1552,7 +1552,7 @@ Section ADQ.
         { eapply adequacy_open_aux2_hcall. }
         { ss. }
       }
-      i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
+      i. ss. des; clarify. destruct vret_tgt as [fr0 vret].
       steps. deflag. gbase. eapply CIH.
     }
     destruct s.
@@ -1626,7 +1626,7 @@ Section ADQ.
         des. rr in _ASSUME0. uipropall. subst.
         force_r. exists true.
         force_r. exists m. force_r. eexists _.
-        force_r. exists (c, c0). force_r. force_r; auto.
+        force_r. exists (x1). force_r. force_r; auto.
         force_r; eauto.
 
         steps. destruct (measure ksb m) eqn:T.
@@ -1635,10 +1635,10 @@ Section ADQ.
             { eapply adequacy_open_aux2_apc. }
             { ss. }
           }
-          i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
+          i. ss. des; clarify. destruct vret_tgt as [fr0 vret].
           steps. force_l. eexists. steps.
-          force_l. eexists. force_l. eexists (c1, c2). steps.
-          force_l; et. force_l; et.
+          force_l. eexists. force_l. eexists (c0, c1, c). steps.
+          force_l; et. steps. force_l; et.
           steps. econs; ss. esplits; et.
         }
         { steps. guclo lbindC_spec. econs.
@@ -1646,17 +1646,17 @@ Section ADQ.
             { eapply adequacy_open_aux2_itr. }
             { ss. }
           }
-          i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
+          i. ss. des; clarify. destruct vret_tgt as [fr0 vret].
           steps. force_l. eexists. steps.
-          force_l. eexists (c1, c2). steps.
-          force_l; et. force_l; et.
+          force_l. eexists (c0, c1, c). steps.
+          force_l; et. steps. force_l; et.
           steps. econs; ss. esplits; et.
         }
       }
       { rr in _ASSUME0. uipropall. subst.
         force_r. exists false.
         force_r. exists tt. force_r. exists t.
-        force_r. exists (c, c0). force_r. force_r; auto.
+        force_r. exists (x1). force_r. force_r; auto.
         force_r.
         { rr. uipropall. }
         steps.
@@ -1665,10 +1665,10 @@ Section ADQ.
           { eapply adequacy_open_aux2_itr. }
           { ss. }
         }
-        i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
+        i. ss. des; clarify. destruct vret_tgt as [fr0 vret].
         steps. force_l. eexists.
-        force_l. eexists (c1, c2). steps.
-        force_l; et. force_l.
+        force_l. eexists (c0, c1, c). steps.
+        force_l; et. steps. force_l.
         { red in _GUARANTEE0. uipropall. }
         steps. econs; ss. esplits; et.
       }

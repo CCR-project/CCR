@@ -37,22 +37,6 @@ Section PROOF.
       { i. eapply app_incl. }
       { instantiate (1:=MapStbM). i. ss. stb_tac. auto. }
     }
-    { eapply MapMAproof.correct.
-      { i. stb_tac. auto. }
-      { i. stb_tac. auto. }
-      { r. i.
-        autounfold with stb in FIND; autorewrite with stb in FIND. ss.
-        rewrite ! eq_rel_dec_correct in *. ss.
-        repeat match goal with
-               | H: context[ match (string_Dec ?x ?y) with _ => _ end ] |- _ =>
-                   destruct (string_Dec x y);
-                   [subst; ss; clarify;
-                    try by (r in PURE; des; ss; unfold is_pure in *; des_ifs;
-                            r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
-                    try by (stb_tac; ss)|]
-               end.
-        all: stb_tac; ss.
-      }
-    }
+    { eapply MapMAproof.correct. }
   Qed.
 End PROOF.
