@@ -20,8 +20,8 @@ Section PROOF.
   Context `{@GRA.inG hRA Σ}.
 
   Definition multSbtb: list (gname * fspecbody) :=
-    [("f", mk_specbody f_spec0 (fun _ => Ret Vundef↑));
-    ("ff", mk_specbody f_spec0 (fun _ => `_: val <- ccallU "g" tt;; `_: val <- ccallU "h" tt;; Ret Vundef↑));
+    [("feasy", mk_specbody f_spec0 (fun _ => Ret Vundef↑));
+    ("fhard", mk_specbody f_spec0 (fun _ => `_: val <- ccallU "g" tt;; `_: val <- ccallU "h" tt;; Ret Vundef↑));
     ("apc", mk_specbody f_spec0 (fun _ => _ <- Ret Vundef;;; Ret Vundef↑))
     ].
 
