@@ -223,6 +223,31 @@ Proof.
   eapply prefix_closed_state; eauto.
 Qed.
 
+Lemma postfix_closed_state
+      st0 pre
+      (UB: of_state st0 (Tr.app pre Tr.ub))
+  :
+    forall beh, of_state st0 (Tr.app pre beh)
+.
+Proof.
+  revert_until L. pcofix CIH. pfold. i. punfold UB.
+  remember (Tr.app pre Tr.ub) as tmp. revert Heqtmp.
+  induction UB using of_state_ind; ii; ss; clarify; try (by destruct pre; ss).
+  - destruct pre; ss. clarify. econs 4; eauto. pclearbot. right. eauto.
+  - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
+  - econs 6; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto.
+Qed.
+
+Theorem postfix_closed
+      pre
+      (BEH: of_program (Tr.app pre Tr.ub))
+  :
+    <<UB: forall bh, of_program (Tr.app pre bh)>>
+.
+Proof.
+  ii. eapply postfix_closed_state; eauto.
+Qed.
+
 Lemma nb_bottom
       st0
   :
