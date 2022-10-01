@@ -74,7 +74,7 @@ Section PROOF.
     destruct e.
     { resub. destruct h. steps.
       hexploit stb_stronger; et. i. des. rewrite FINDSRC. steps.
-      Local Transparent HoareCall. unfold HoareCall, mput, mget. Local Opaque HoareCall.
+      Local Transparent HoareCall. unfold HoareCall, ASSUME, ASSERT, mput, mget. Local Opaque HoareCall.
       steps. specialize (WEAKER x (Some mn)). des.
       assert (exists rarg_src,
                  (<<PRE: precond fsp_src (Some mn) x_tgt varg_src x0 rarg_src>>) /\
@@ -85,9 +85,9 @@ Section PROOF.
         { instantiate (1:=c1 ⋅ ctx ⋅ c). r_wf _GUARANTEE. }
         i. des. esplits; et. r_wf H0.
       }
-      des. force_l. exists (rarg_src, c1, c).
+      des. force_l. exists x_tgt.
+      steps. force_l; et. exists (rarg_src, c1, c).
       steps. force_l; et.
-      steps. force_l. exists x_tgt.
       steps. force_l. exists x0.
       steps. force_l; et.
       steps. force_l; et.
@@ -145,7 +145,7 @@ Section PROOF.
               (mrs_tgt, fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body) arg).
   Proof.
     red in WF. des. subst.
-    Local Transparent HoareFun. unfold fun_to_tgt, HoareFun, mput, mget. Local Opaque HoareFun.
+    Local Transparent HoareFun. unfold fun_to_tgt, HoareFun, ASSUME, ASSERT, mput, mget. Local Opaque HoareFun.
     destruct arg as [mn_caller varg_tgt]. ss. des. clarify.
     ginit. steps.
     hexploit (fsp_weaker x mn_caller). i. des.
@@ -158,9 +158,10 @@ Section PROOF.
       i. des. esplits; et. r_wf H0.
     }
     des. force_r. exists x_tgt.
-    steps. force_r. exists x0.
     steps. force_r. exists (rarg_tgt, c0).
     steps. force_r; et.
+    { rewrite URA.unit_id; ss. }
+    steps. force_r. exists x0.
     steps. force_r; et.
     steps. deflag. guclo lbindC_spec. econs.
     { gfinal. right. r in MEASURE. des_ifs.
@@ -170,16 +171,17 @@ Section PROOF.
     i. ss. des; clarify. steps.
     assert (exists rret_src,
                (<<POSTSRC: postcond fsp_src mn_caller x vret x1 rret_src>>) /\
-               (<<VALIDSRC: URA.wf (rret_src ⋅ ctx  ⋅ c2)>>)
+               (<<VALIDSRC: URA.wf (rret_src ⋅ ctx  ⋅ c1)>>)
            ).
-    { hexploit POST; et. i. uipropall. hexploit (H c1); et.
-      { eapply URA.wf_mon. instantiate (1:=(ctx ⋅ c2)). r_wf _GUARANTEE. }
-      { instantiate (1:=(ctx ⋅ c2)). r_wf _GUARANTEE. }
-      i. des. esplits; et. r_wf H0.
+    { hexploit POST; et. i. uipropall. hexploit (H c2); et.
+      { eapply URA.wf_mon. instantiate (1:=(ctx ⋅ c1 ⋅ c3)). r_wf _GUARANTEE. }
+      { instantiate (1:=(ctx ⋅ c3 ⋅ c1)). r_wf _GUARANTEE. }
+      i. des. esplits; et. eapply URA.wf_mon. instantiate (1:=c3). r_wf H0.
     }
-    des. force_l. exists x1.
-    steps. force_l. exists (rret_src, c2).
+    des. force_l. exists (rret_src, ε, c1).
     steps. force_l; et.
+    { rewrite URA.unit_id; ss. }
+    steps. force_l; et. exists x1.
     steps. force_l; et.
     steps. red. esplits; et. red. esplits; et.
     Unshelve. all: ss. all: try exact 0.

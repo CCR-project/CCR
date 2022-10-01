@@ -643,12 +643,12 @@ Section ADQ.
       unfold KMod.get_stb in T. list_tac.
       des_ifs. ss. list_tac. des_ifs. ss.
       Local Transparent HoareCall.
-      unfold HoareCall, mput, mget. steps.
+      unfold HoareCall, ASSUME, ASSERT, mput, mget. steps.
+      force_l. exists None. steps.
       force_l. exists (ε, ε, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
-      steps. force_l. exists None. steps.
-      force_l. exists (args). steps.
+      steps. force_l. exists (args). steps.
       force_l.
       { rr. uipropall. }
       steps. force_l.
@@ -656,12 +656,13 @@ Section ADQ.
       steps. rr in _ASSUME0. uipropall. subst. destruct w1.
       deflag. gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
-    - unfold HoareCall, mput, mget. steps.
+    - unfold HoareCall, ASSUME, ASSERT, mput, mget. steps.
+      force_l. exists None.
+      steps.
       force_l. exists (ε, ε, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
-      steps. force_l. exists None. steps.
-      force_l. eexists (args). steps.
+      steps. force_l. eexists (args). steps.
       force_l.
       { rr. uipropall. }
       steps. force_l.
@@ -684,7 +685,7 @@ Section ADQ.
   .
   Proof.
     Local Transparent HoareFun.
-    unfold fun_to_tgt, HoareFun, mput, mget, cfunN.
+    unfold fun_to_tgt, HoareFun, ASSUME, ASSERT, mput, mget, cfunN.
     Local Opaque HoareFun.
     ginit. steps.
     replace (match x with | Some _ | _ => ord_top end) with ord_top; cycle 1.
@@ -706,10 +707,9 @@ Section ADQ.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     }
     i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
-    force_l. eexists. force_l. eexists (_, _). steps.
-    force_l.
+    force_l. eexists (_, _, _). steps. force_l.
     { instantiate (1:=ε). instantiate (1:=ε). r_wf SIM0. }
-    steps. force_l.
+    steps. force_l. eexists. steps. force_l.
     { rr. destruct x; et; rr; uipropall. }
     steps.
     Unshelve. all: try exact 0.
@@ -1454,10 +1454,11 @@ Section ADQ.
   Proof.
     i. ginit.
     Local Transparent HoareCall. unfold HoareCall. Local Opaque HoareCall.
-    unfold mput, mget. steps.
+    unfold ASSUME, ASSERT, mput, mget. steps.
+    force_l. exists (Some x). steps.
     force_l. eexists (c0, c1, c). steps.
-    force_l; auto. steps. force_l. exists (Some x). steps.
-    force_l. eexists. force_l.
+    force_l; auto. steps. force_l.
+    eexists. force_l.
     { rr. uipropall. esplits; et. rr. uipropall. esplits; et. rr. uipropall. }
     steps. force_l; auto. steps. des; clarify.
     rewrite Any.pair_split in _UNWRAPU. clarify.
@@ -1621,12 +1622,12 @@ Section ADQ.
       ii. subst. ss. ginit.
       unfold KModSem.disclose_ksb_tgt, fun_to_tgt. ss.
       Local Transparent HoareFun. unfold HoareFun. Local Opaque HoareFun.
-      des. clarify. unfold mget, mput. steps. destruct x.
+      des. clarify. unfold ASSUME, ASSERT, mget, mput. steps. destruct x.
       { rr in _ASSUME0. uipropall. des. rr in _ASSUME0. uipropall.
         des. rr in _ASSUME0. uipropall. subst.
         force_r. exists true.
-        force_r. exists m. force_r. eexists _.
-        force_r. exists (c, c0). force_r. force_r; auto.
+        force_r. exists m. force_r. exists (c, c0).
+        force_r. force_r; auto. force_r. eexists _.
         force_r; eauto.
 
         steps. destruct (measure ksb m) eqn:T.
@@ -1637,8 +1638,8 @@ Section ADQ.
           }
           i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
           steps. force_l. eexists. steps.
-          force_l. eexists. force_l. eexists (c1, c2). steps.
-          force_l; et. force_l; et.
+          force_l. eexists (c2, c3, c1). force_l. steps. force_l; et. force_l. eexists.
+          force_l; et.
           steps. econs; ss. esplits; et.
         }
         { steps. guclo lbindC_spec. econs.
@@ -1647,17 +1648,15 @@ Section ADQ.
             { ss. }
           }
           i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
-          steps. force_l. eexists. steps.
-          force_l. eexists (c1, c2). steps.
-          force_l; et. force_l; et.
+          steps. force_l. eexists (c2, c3, c1). steps.
+          force_l; et. steps. force_l; et. eexists. force_l; et.
           steps. econs; ss. esplits; et.
         }
       }
       { rr in _ASSUME0. uipropall. subst.
         force_r. exists false.
-        force_r. exists tt. force_r. exists t.
-        force_r. exists (c, c0). force_r. force_r; auto.
-        force_r.
+        force_r. exists tt. force_r. exists (c, c0).
+        steps. force_r; et. steps. force_r. exists t. force_r.
         { rr. uipropall. }
         steps.
         guclo lbindC_spec. econs.
@@ -1666,11 +1665,10 @@ Section ADQ.
           { ss. }
         }
         i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
-        steps. force_l. eexists.
-        force_l. eexists (c1, c2). steps.
-        force_l; et. force_l.
-        { red in _GUARANTEE0. uipropall. }
-        steps. econs; ss. esplits; et.
+        steps. force_l. eexists (c2, c3, c1). steps.
+        force_l; et. steps. force_l. eexists. steps.
+        force_l; et. steps.
+        econs; ss. esplits; et.
       }
     }
     { exists tt. esplits; et. }

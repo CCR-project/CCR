@@ -81,14 +81,12 @@ Section MODE.
   .
   Proof.
     inv WF.
-    unfold HoareFunArg, mput, mget, assume, guarantee.
+    unfold HoareFunArg, ASSUME, ASSERT, mput, mget, assume, guarantee.
     repeat (ired_both; apply sim_itreeC_spec; econs). intro x.
-    repeat (ired_both; apply sim_itreeC_spec; econs). intro varg_src.
     repeat (ired_both; apply sim_itreeC_spec; econs). intros (rarg_src, ctx).
-    repeat (ired_both; apply sim_itreeC_spec; econs).
     repeat (ired_both; apply sim_itreeC_spec; econs). intro VALID.
-    repeat (ired_both; apply sim_itreeC_spec; econs). intro ord_cur.
-    repeat (ired_both; gstep; econs). i.
+    repeat (ired_both; apply sim_itreeC_spec; econs). intro varg_src.
+    repeat (ired_both; apply sim_itreeC_spec; econs). i.
     eapply Any.pair_inj in H2. des; clarify. eapply Any.upcast_inj in H0. des; clarify.
     eapply Any.pair_inj in H1. des; clarify. eapply Any.upcast_inj in H0. des; clarify.
     ired_both. eapply ARG; et.
@@ -177,9 +175,8 @@ Section MODE.
   .
   Proof.
     subst.
-    unfold HoareFunArg, mput, mget, assume, guarantee. des.
+    unfold HoareFunArg, ASSUME, ASSERT, mput, mget, assume, guarantee. des.
     repeat (ired_both; apply sim_itreeC_spec; econs). exists x.
-    repeat (ired_both; apply sim_itreeC_spec; econs). exists varg_tgt.
     eapply current_iPropL_pop in ACC. des.
     eapply current_iPropL_pop in TL. des.
     eapply current_iPropL_pop in TL0. des. ss. clear_fast.
@@ -188,6 +185,7 @@ Section MODE.
     repeat (ired_both; apply sim_itreeC_spec; econs). esplits.
     { clear - TL HD0. rr in HD0. uipropall. rr in HD0. des; clarify.
       eapply wf_extends; et. exists ctx0. r_solve. }
+    repeat (ired_both; apply sim_itreeC_spec; econs). exists varg_tgt.
     repeat (ired_both; apply sim_itreeC_spec; econs). eexists; et.
     ired_both. eapply ARG.
     eapply current_iPropL_push; et.
@@ -302,41 +300,41 @@ Section MODE.
              (Any.pair mp_tgt mr_tgt↑, (HoareFunRet Qt mn xt (ctx ⋅ rx, vret_tgt)))
   .
   Proof.
-    subst. unfold HoareFunRet, mput, mget, guarantee.
-    repeat (ired_both; apply sim_itreeC_spec; econs). exists vret_tgt.
+    subst. unfold HoareFunRet, ASSUME, ASSERT, mput, mget, guarantee.
     steps.
-    repeat (ired_both; apply sim_itreeC_spec; econs).
-    rename c0 into mr_tgt1.
+    rename c into mr_tgt1.
     assert (exists mr_src1 rret_src,
                (<<UPDATABLE: URA.wf (ctx ⋅ (mr_tgt1 ⋅ mr_src1 ⋅ rret_src))>>) /\
                (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\
                (<<PRE: Qs mn xs vret_src vret_tgt rret_src>>)).
-    { clear - ACC UPDATABLE x0 x1. red in ACC. inv ACC.
-      rename x into vret_tgt_tgt. rename c into rt.
+    { clear - ACC UPDATABLE x x1. red in ACC. inv ACC.
+      rename x0 into vret_tgt_tgt. rename c0 into rt.
       specialize (UPDATABLE vret_tgt_tgt).
       unfold from_iPropL in IPROP.
       uipropall. des. clarify.
       rename a1 into rx0.
       hexploit (UPDATABLE (rt ⋅ rx)); et.
-      { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. }
+      { eapply wf_extends; try apply x. r. exists (c1 ⋅ ctx ⋅ mr_tgt1). r_solve. }
       { esplits; eauto. rr in IPROP4. uipropall. eapply IPROP4; eauto.
-        { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1 ⋅ rt). r_solve. }
+        { eapply wf_extends; try apply x. r. exists (c1 ⋅ ctx ⋅ mr_tgt1 ⋅ rt). r_solve. }
         { refl. }
       }
-      { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. }
+      { instantiate (1:=c1 ⋅ ctx ⋅ mr_tgt1). r_wf x. }
       i. des. subst. esplits; [|eauto|eauto].
-      { r_wf H. }
+      { eapply URA.wf_mon. instantiate (1:=c1). r_wf H. }
     }
-    des. exists (rret_src, mr_src1 ⋅ mr_tgt1).
-    steps.
+    des.
+    repeat (ired_both; apply sim_itreeC_spec; econs). exists (rret_src, ε, mr_src1 ⋅ mr_tgt1).
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits.
     { r_wf UPDATABLE0. }
+    repeat (ired_both; apply sim_itreeC_spec; econs). exists vret_tgt.
+    steps.
     repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     repeat (ired_both; apply sim_itreeC_spec; econs).
     exploit EQ; et.
     { econs; et. ii. unfold OwnT. uipropall. esplits; et. refl. }
     i. uipropall. exploit x3; try apply x1; et.
-    { eapply wf_extends; try apply x0. exists (ctx ⋅ rx ⋅ mr_tgt1). r_solve. }
+    { eapply wf_extends; try apply x. exists (c1 ⋅ ctx ⋅ rx ⋅ mr_tgt1). r_solve. }
     i. rr in x4. uipropall. et.
   Unshelve. all: ss.
   Qed.
@@ -348,14 +346,9 @@ Section MODE.
              (fsp: fspec):
     gname -> Any.t -> Σ -> (itree Es) _ :=
     fun fn varg_src ctx =>
-      '(rarg, fr, mr) <- trigger (Choose (Σ * Σ * Σ));;
-      _ <- mput mr;;
-      _ <- guarantee(URA.wf (rarg ⋅ fr ⋅ ctx ⋅ mr));;
-
-      x <- trigger (Choose fsp.(meta));; varg_tgt <- trigger (Choose Any.t);;
+      x <- trigger (Choose fsp.(meta));;
+      '(fr, varg_tgt) <- ASSERT (precond fsp (Some mn) x) varg_src ctx;;
       let ord_next := measure fsp x in
-      _ <- guarantee(fsp.(precond) (Some mn) x varg_src varg_tgt rarg);;
-
       _ <- guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       Ret (x, fr, varg_tgt)
   .
@@ -365,19 +358,12 @@ Section MODE.
              (mn: mname)
              (tbr: bool)
              (ord_cur: ord)
-             (Q: option string → X → Any.t → Any.t → Σ → Prop)
+             (Q: option string → X → Any.t → Any.t → iProp)
              (vret_tgt: Any.t)
              (x: X)
              (fr: Σ):
     itree Es (Σ * Any.t) :=
-      '(rret, ctx) <- trigger (Take (Σ * Σ));;
-      mr <- mget;;
-      _ <- assume(URA.wf (rret ⋅ fr ⋅ ctx ⋅ mr));;
-
-      vret_src <- trigger (Take Any.t);;
-      _ <- assume(Q (Some mn) x vret_src vret_tgt rret);;
-
-      Ret (ctx, vret_src) (*** return to body ***)
+      ASSUME (Q (Some mn) x) vret_tgt fr
   .
 
   Lemma HoareCall_parse
@@ -448,13 +434,13 @@ Section MODE.
              (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr_tgt ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
   .
   Proof.
-    subst. rewrite ! HoareCall_parse. unfold HoareCallPre, mput, mget, assume, guarantee.
+    subst. rewrite ! HoareCall_parse. unfold HoareCallPre, ASSUME, ASSERT, mput, mget, assume, guarantee.
     steps.
     rename c into mr_tgt1. rename c0 into ro_tgt. rename c1 into fr_tgt.
     assert(x1 = varg_tgt).
     { exploit SIMPLE; et. intros T. uipropall.
       exploit (T ro_tgt); et.
-      { eapply wf_extends; try apply x. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
+      { eapply wf_extends; try apply x0. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
       intro U. rr in U. uipropall.
     }
     subst.
@@ -471,29 +457,29 @@ Section MODE.
       eapply current_iPropL_pop in ACC; des.
       eapply current_iPropL_pop in TL; des.
       eapply current_iPropL_nil in TL0. ss.
-      specialize (UPDATABLE x0).
+      specialize (UPDATABLE x).
       rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
       uipropall. exploit UPDATABLE; swap 1 2.
       { esplits; et.
         { rr in HD1. uipropall. eapply HD1; [|refl].
-          eapply wf_extends; try apply x.
+          eapply wf_extends; try apply x0.
           exists (ro_tgt ⋅ fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve.
         }
         { rr. uipropall. }
       }
       { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). instantiate (1:=ε). r_solve. }
-      { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
+      { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x0. }
       i; des. clarify.
       rr in x8. uipropall. des; ss.
       esplits; et.
       { eapply wf_extends; et. r. exists b. r_solve. }
     }
-    des. (ired_both; apply sim_itreeC_spec; econs).
-    exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
+    des.
+    (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
+    (ired_both; apply sim_itreeC_spec; econs). exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
     steps.
     (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     { r_wf UPDATABLE0. }
-    (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     (ired_both; apply sim_itreeC_spec; econs). esplits.
     (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
     (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
@@ -501,7 +487,7 @@ Section MODE.
     { econs; et. i. unfold OwnT. uipropall. esplits; eauto. refl. }
     i. inv WF.
 
-    unfold HoareCallPost at 1. unfold mget. steps.
+    unfold HoareCallPost at 1. unfold ASSUME, ASSERT, mget. steps.
     eapply POST; et.
     { eapply current_iPropL_push; et.
       eapply current_iPropL_push; et; cycle 1.
@@ -600,7 +586,7 @@ Section MODE.
   .
   Proof.
     (* inv WF. *)
-    unfold HoareCallPost, mput, mget, assume, guarantee. steps.
+    unfold HoareCallPost, ASSUME, ASSERT, mput, mget, assume, guarantee. steps.
     eapply current_iPropL_pop in ACC. des.
     eapply current_iPropL_pop in TL. des.
     eapply current_iPropL_pop in TL0. des.
@@ -773,17 +759,19 @@ Section MODE.
         }
         des. subst.
 
-        steps. force_l. exists x0. steps. force_l; ss. steps. unfold HoareCall. unfold mput, mget. steps.
+        steps. force_l. exists x0. steps. force_l; ss. steps. unfold HoareCall, ASSUME, ASSERT, mput, mget. steps.
         des; ss.
         assert(STB: stb_src s = Some f).
         { eapply STBINCL; et. r. esplits; et. }
         force_l. eexists (_, _). steps. rewrite STB. steps. instantiate (1:=t).
-        unfold HoareCall. unfold mput, mget. steps.
+        unfold HoareCall, ASSUME, ASSERT, mput, mget. steps.
 
-        force_l. rename c into mr_tgt1. rename c0 into ro. rename c1 into rf.
-        exists (ro, rf ⋅ rf_src, rm_src ⋅ mr_tgt1). steps. force_l; ss.
+        force_l. rename c into mr_tgt1. rename c0 into ro. rename c1 into rf. esplits; et.
+        steps. force_l; ss.
+        exists (ro, rf ⋅ rf_src, rm_src ⋅ mr_tgt1). 
+        steps. force_l.
         { r_wf _GUARANTEE1. }
-        steps. force_l. esplits; et. steps. force_l. esplits; et. steps. force_l. esplits; et.
+        steps. force_l. esplits; et. steps. force_l. esplits; et.
         steps. force_l; et. steps. gstep. econs; eauto.
         { econs. eapply to_semantic. iIntros "[A B]". iFrame. iStopProof.
           uipropall. i. eapply iProp_mono; et.

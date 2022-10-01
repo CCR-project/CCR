@@ -463,7 +463,7 @@ Section CANCEL.
 
     steps. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
-    { rewrite FIND. unfold HoareCall, mput, mget. steps.
+    { rewrite FIND. unfold HoareCall, ASSUME, ASSERT, mput, mget. steps.
       erewrite zip_state_get; et. steps.
       des; clarify. destruct tbr; ss.
       { exfalso. hexploit TRIVIAL; et. intro T. rewrite T in *. hexploit x4; ss. }
@@ -472,7 +472,7 @@ Section CANCEL.
       { destruct cur; ss. hexploit x5; ss. intro T. rewrite T in *; ss. }
       steps. rewrite FINDMID. steps.
     }
-    unfold HoareCall, mput, mget.
+    unfold HoareCall, ASSUME, ASSERT, mput, mget.
 
     (*** exploiting both_tau ***)
     rewrite STB. ss. mred. force_r.
@@ -490,9 +490,9 @@ Section CANCEL.
     end.
     2: { mred. auto. }
     deflag. guclo bindC_spec. econs.
-    { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = (f.(measure) x0)).
+    { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = (f.(measure) x)).
       destruct tbr.
-      { steps. des. destruct (measure f x0); ss.
+      { steps. des. destruct (measure f x); ss.
         { exists n. steps. }
         { exfalso. hexploit x4; ss. }
       }
@@ -508,20 +508,20 @@ Section CANCEL.
     { instantiate (1:= fun '(st_src1, vret_src) '(st_tgt1, vret_tgt) =>
                          exists (mrs1: r_state) rret,
                            (<<ZIP: st_tgt1 = zip_state st_src1 mrs1>>) /\
-                           (<<POST: f.(postcond) (Some mn) x0 vret_src vret_tgt rret>>) /\
+                           (<<POST: f.(postcond) (Some mn) x vret_src vret_tgt rret>>) /\
                            (<<RWF: URA.wf (rret ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn mrs1) ⋅ (mrs1 mn)))>>)).
       fold sk. fold sk. set (mn0:=SModSem.mn (SMod.get_modsem md sk)) in *.
       fold Any_tgt in x3.
-      unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun, mget, mput.
+      unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun, ASSUME, ASSERT, mget, mput.
       rename x3 into PRECOND. rename c0 into rarg.
-      steps. exists x0.
-      steps. exists varg_src. steps.
-      eexists (rarg, c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))).
-      steps. erewrite ! zip_state_mput; et.
+      steps. exists x.
+      steps. eexists (rarg, c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))). steps.
+      erewrite ! zip_state_mput; et. steps.
       erewrite zip_state_get; et. steps.
-      assert (RWF0: URA.wf (rarg ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))) ⋅ update mrs0 mn c mn0)).
-      { r_wf x. symmetry. eapply rsum_minus_update; et. }
-      unshelve esplits; eauto.
+      assert (RWF0: URA.wf (rarg ⋅ ε ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))) ⋅ update mrs0 mn c mn0)).
+      { r_wf x0. symmetry. eapply rsum_minus_update; et. }
+      unshelve esplits; eauto. steps.
+      exists varg_src.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       deflag. guclo bindC_spec. econs.
       { gbase. eapply CIH; ss.
@@ -531,7 +531,9 @@ Section CANCEL.
         steps. rewrite zip_state_get; et.
         rewrite Any.pair_split. steps.
         esplits; ss; et.
-        { r_wf x6. symmetry. eapply rsum_minus_update; et. }
+        { assert(URA.wf (c2 ⋅ (c1 ⋅ frs ⋅ rsum_minus mn0 mrs1) ⋅ c0)).
+          { eapply (@URA.wf_mon _ _ c3). r_wf x3. }
+          r_wf H. symmetry. eapply rsum_minus_update; et. }
       }
     }
     { ii. ss. des_ifs_safe. des. subst.
@@ -593,15 +595,14 @@ Section CANCEL.
 
     Local Transparent ModSemL.prog. ss.
     unfold Any_src, Any_mid, Any_tgt in *. rewrite FINDTGT. rewrite FINDMID. steps.
-    eexists. steps. eexists. steps.
+    eexists. steps. unfold ASSUME, ASSERT, mput, mget. steps.
     eexists (entry_r, rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs).
-    steps. unfold mput, mget. steps.
-    rewrite zip_state_get; et.
-    rewrite Any.pair_split. steps.
-    assert (RWF: URA.wf (entry_r ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
+    steps. rewrite zip_state_get; et. steps.
+    assert (RWF: URA.wf (entry_r ⋅ ε ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
     { r_wf WFR. eapply INITIALRSUM; et. }
     unshelve esplits; et.
-    steps. unshelve esplits; et. steps.
+    steps.
+    eexists. steps. unshelve esplits; et. steps.
     guclo bindC_spec. econs.
     { deflag. gfinal. right. fold simg.
       eapply adequacy_type_aux; ss.
@@ -613,8 +614,8 @@ Section CANCEL.
     steps. rewrite zip_state_get; et.
     rewrite Any.pair_split. steps.
     { eapply RET; [|et]. eapply URA.wf_mon.
-      instantiate (1:=(ε ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) mrs1) ⋅ c0).
-      r_wf x1. }
+      instantiate (1:=(c1 ⋅ ε ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) mrs1) ⋅ c).
+      r_wf x0. }
     Unshelve. all: try (exact 0).
   Qed.
 
