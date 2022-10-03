@@ -811,9 +811,6 @@ Tactic Notation "greflgen" constr(t) "as" ident(g)  :=
   generalize (eq_refl t); generalize t at -2 as g
   ; intros ? EQ ?; revert EQ.
 
-Ltac eadmit :=
-  exfalso; clear; admit.
-
 Ltac special H :=
   (* eapply mp; refine (H _). *)
   match type of H with
@@ -1251,9 +1248,6 @@ Ltac des_safe_aux TAC :=
 
 Tactic Notation "des_safe" := des_safe_aux clarify.
 Tactic Notation "des_safe" tactic(TAC) := des_safe_aux TAC.
-
-Definition admit (excuse: String.string) {T: Type} : T.  Admitted.
-Tactic Notation "admit" constr(excuse) := idtac excuse; exact (admit excuse).
 
 (* Copied from SoftwareFoundations - LibTactics.v *)
 (* ---------------------------------------------------------------------- *)
