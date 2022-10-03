@@ -1,29 +1,109 @@
 # Conditional Contextual Refinement
 
-## Dependencies
-Our development successfully compiles with following versions (in Linux, OS X):
+This is the artifact for the paper "Conditional Contextual Refinement".
 
-- coq (= *8.13.2*)
+## List of Claims
+The main claim of this artifact is that the description in the paper
+corresponds to the Coq development (modulo small simplifications for
+presentation purposes).
 
-- coq-ext-lib (= *0.11.3*)
-- coq-paco (= *4.1.1*)
-- coq-itree (= *3.2.0*)
-- coq-ordinal (= *0.5.0*)
+## Download, installation, and sanity-testing
+The artifact is presented as a docker image. The raw source code could
+be found [here](https://sf.snu.ac.kr/publications/ccr.tar.gz) and the
+docker image -- containing the source-code with all dependencies
+already installed -- could be found [here](TODO). We recommend using
+the virtual machine unless you are an experienced opam user.
 
-- coq-stdpp (= *1.5.0*)
-- coq-iris (= *3.4.0*)
+If there is a need
+to update our artifact in the process of the review process, we will
+make the latest version available on those links.  We are also
+submitting the latest source code and docker image, just in case.
 
-- coq-compcert (= *3.9*) and its dependencies:
-  + coq-flocq (= *3.4.1*)
-  + menhir (= *20210310*)
-  + coq-menhirlib (= *20210310*)
+### Installing via docker image
 
-- ocamlbuild (= *0.14.0*)
+### Installing manually
 
-All packages can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
 
-## How to build
-- make -j[N] -k
+## Overview of the source code
+
+## Evaluation Instructions
+To evaluate this artifact, we propose the following steps:
+1. Confirm that the Coq development compiles without problems.  To do
+   so, run `make clean` if you have previously built the Coq
+   development or are using the docker image.  Thereafter, run `make
+   -jN` where `N` is the number of cores you wish to use.
+2. Search for `admit` or `Admitted.` in the source code files. As you
+   will see, the development does not have any admits.
+3. Read the Section "Differences to the paper" to familiarize yourself
+   with the differences between the on-paper presentation and the Coq
+   development.
+4. Read through the Coq development and compare the Theorems and
+   Definitions with those from the paper. You can find a mapping from
+   paper to Coq below in the section "Mapping between the paper and
+   the Coq development". You can find the Coq files in the folder
+   `dimsum`.
+5. Check that the axioms used in the development are only the ones
+   listed under "Axioms" below. To do so, you can execute
+   `Print Assumptions compiler_correct.` after a theorem (here
+   `compiler_correct`).
+6. Check that the Gitlab https://gitlab.mpi-sws.org/iris/dimsum
+   hosting the project is publicly accessible, includes an issue
+   tracker, and the code has an open source license. The commit that
+   was used to generate the artifact can be found here:
+   https://gitlab.mpi-sws.org/iris/dimsum/-/tree/7d5f0d636030173748e4a9e331e0d03718b8c8a6
+
+## Differences to the paper
+
+## Mapping between the paper and the Coq development
+
+## Axioms
+
+
+
+MapIAproof
+Print Assumptions correct.
+
+Axioms:
+STS.syscall_sem : STS.event → Prop
+RelationalChoice.relational_choice
+  : ∀ (A B : Type) (R : A → B → Prop),
+      (∀ x : A, ∃ y : B, R x y)
+      → ∃ R' : A → B → Prop, Logic.subrelation R' R ∧ (∀ x : A, ∃ y, unique (λ y : B, R' x y) y)
+Axioms.prop_ext : ClassicalFacts.prop_extensionality
+proof_irrelevance : ∀ (P : Prop) (p1 p2 : P), p1 = p2
+functional_extensionality_dep : ∀ (A : Type) (B : A → Type) (f g : ∀ x : A, B x), (∀ x : A, f x = g x) → f = g
+Eqdep.Eq_rect_eq.eq_rect_eq : ∀ (U : Type) (p : U) (Q : U → Type) (x : Q p) (h : p = p), x = eq_rect p Q x p h
+ClassicalUniqueChoice.dependent_unique_choice
+  : ∀ (A : Type) (B : A → Type) (R : ∀ x : A, B x → Prop),
+      (∀ x : A, ∃ y, unique (λ y : B x, R x y) y) → ∃ f : ∀ x : A, B x, ∀ x : A, R x (f x)
+constructive_definite_description : ∀ (A : Type) (P : A → Prop), (∃ y, unique (λ x : A, P x) y) → {x : A | P x}
+classic : ∀ P : Prop, P ∨ ¬ P
+bisimulation_is_eq : ∀ (E : Type → Type) (R : Type) (t1 t2 : itree E R), t1 ≅ t2 → t1 = t2
+
+
+Axioms:
+syscall_sem : event → Prop
+relational_choice
+  : ∀ (A B : Type) (R : A → B → Prop),
+      (∀ x : A, ∃ y : B, R x y)
+      → ∃ R' : A → B → Prop, Logic.subrelation R' R ∧ (∀ x : A, ∃ y, unique (λ y : B, R' x y) y)
+Axioms.prop_ext : ClassicalFacts.prop_extensionality
+ProofIrrelevance.proof_irrelevance : ∀ (P : Prop) (p1 p2 : P), p1 = p2
+functional_extensionality_dep : ∀ (A : Type) (B : A → Type) (f g : ∀ x : A, B x), (∀ x : A, f x = g x) → f = g
+Eqdep.Eq_rect_eq.eq_rect_eq : ∀ (U : Type) (p : U) (Q : U → Type) (x : Q p) (h : p = p), x = eq_rect p Q x p h
+dependent_unique_choice
+  : ∀ (A : Type) (B : A → Type) (R : ∀ x : A, B x → Prop),
+      (∀ x : A, ∃ y, unique (λ y : B x, R x y) y) → ∃ f : ∀ x : A, B x, ∀ x : A, R x (f x)
+constructive_definite_description : ∀ (A : Type) (P : A → Prop), (∃ y, unique (λ x : A, P x) y) → {x : A | P x}
+classic : ∀ P : Prop, P ∨ ¬ P
+bisimulation_is_eq : ∀ (E : Type → Type) (R : Type) (t1 t2 : itree E R), t1 ≅ t2 → t1 = t2
+
+
+
+
+
+
+
 
 ## Delta with paper (and technical report)'s presentation
 
