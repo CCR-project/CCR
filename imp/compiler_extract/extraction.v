@@ -182,7 +182,7 @@ Separate Extraction
    (* imp_mem2_prog *)
    (* imp_linkF_prog imp_linkG_prog imp_linkMain_prog *)
    Stack_prog Echo_prog EchoMain_prog Client_prog
-   Appprog MWprog Map_prog
+   (* Appprog MWprog Map_prog *)
 .
 
 Cd "../..".
