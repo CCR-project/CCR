@@ -23,7 +23,7 @@ Require Import Imp2Asm.
 (* Require Import ImpMem2. *)
 (* Require Import ImpLink. *)
 Require Import StackImp EchoImp EchoMainImp ClientImp.
-Require Import MWAppImp MWCImp MWMapImp.
+(* Require Import MWAppImp MWCImp MWMapImp. *)
 (************************************)
 
 Extract Constant excluded_middle_informative => "true".
