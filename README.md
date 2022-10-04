@@ -26,7 +26,7 @@ sure you have internet connection):
 
 or, you can use the Docker image that we submitted:
 
-2. Run `sudo docker load < CCR.tar; sudo docker run -it alxest/popl23ae /bin/bash`.
+2. Run `sudo docker load < CCR.tar && sudo docker run -it alxest/popl23ae /bin/bash`.
 
 
 ### Installing manually with raw source code
@@ -51,11 +51,11 @@ opam pin add ocamlbuild 0.14.1 -y
 Now, you can either use the source code from the Github (make sure you
 have internet connection):
 
-3. Run `git clone git@github.com:alxest/CCR.git; cd CCR; make`
+3. Run `git clone git@github.com:alxest/CCR.git && cd CCR && make`
 
 or you can use the raw source code that we submitted:
 
-3. Run `tar -xvf CCR.tar.gz; cd CCR; make`.
+3. Run `mv CCR.tar.gz fresh_directory && tar -xvf CCR.tar.gz && cd CCR && make`.
 
 ## Evaluation Instructions
 To evaluate this artifact, we propose the following steps:
