@@ -8,9 +8,10 @@ the paper (modulo small simplifications for expository purposes) and
 compiles without any problem.
 
 ## Download, installation, and sanity-testing
-The artifact is presented as a Docker image, but we are also
-submitting the latest source code just in case. Both of these are also
-available [here](https://github.com/alxest/CCR) and
+The artifact is presented as a Docker image ("CCR-docker.tar"), but we
+are also submitting the latest source code ("CCR.tar.gz") just in
+case. Both of these are also available
+[here](https://github.com/alxest/CCR) and
 [here](https://hub.docker.com/repository/docker/alxest/popl23ae).  If
 there is a need to update our artifact in the process of the review
 process, we will make the latest version available on those links.
