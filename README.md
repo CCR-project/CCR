@@ -10,16 +10,52 @@ compiles without any problem.
 ## Download, installation, and sanity-testing
 The artifact is presented as a Docker image, but we are also
 submitting the latest source code just in case. Both of these are also
-available [here](https://github.com/alxest/CCR) and [here](TODO).  If
+available [here](https://github.com/alxest/CCR) and
+[here](https://hub.docker.com/repository/docker/alxest/popl23ae).  If
 there is a need to update our artifact in the process of the review
 process, we will make the latest version available on those links.
 
 ### Installing via Docker image
-To use Docker, please install [Docker](https://www.docker.com/)
-(version 20.10.14 is tested) and TODO.
+1. Install [Docker](https://www.docker.com/) (version 20.10.14 is
+tested).
 
-### Installing manually
-TODO
+Now, you can either use the Docker image from the Docker Hub (make
+sure you have internet connection):
+
+2. Run `sudo docker run -it alxest/popl23ae /bin/bash`
+
+or, you can use the Docker image that we submitted:
+
+2. Run `sudo docker load < CCR.tar; sudo docker run -it alxest/popl23ae /bin/bash`.
+
+
+### Installing manually with raw source code
+1. Install opam in your system with the version at least 2.1.0.
+2. Make a fresh directorcy, install a local opam switch and install the dependencies:
+```
+mkdir fresh_directory && cd fresh_directory &&
+opam switch create . ocaml.4.13.0 &&
+eval $(opam env) &&
+opam repo add coq-released "https://coq.inria.fr/opam/released" &&
+opam config env &&
+opam pin add coq 8.15.2 -y &&
+opam pin add coq-paco 4.1.2 -y &&
+opam pin add coq-itree 4.0.0 -y &&
+opam pin add coq-ordinal 0.5.2 -y &&
+opam pin add coq-stdpp 1.7.0 -y &&
+opam pin add coq-iris 3.6.0 -y &&
+opam pin add coq-compcert 3.11 -y &&
+opam pin add ocamlbuild 0.14.1 -y
+```
+
+Now, you can either use the source code from the Github (make sure you
+have internet connection):
+
+3. Run `git clone git@github.com:alxest/CCR.git; cd CCR; make`
+
+or you can use the raw source code that we submitted:
+
+3. Run `tar -xvf CCR.tar.gz; cd CCR; make`.
 
 ## Evaluation Instructions
 To evaluate this artifact, we propose the following steps:
@@ -40,22 +76,25 @@ To evaluate this artifact, we propose the following steps:
    tracker) with [open source
    license](https://github.com/alxest/CCR/blob/popl23ae/LICENSE). We
    have also setup [public chat room](https://discord.gg/jQezqzJZ) to
-   accommodate collaboration with others. The commit we used in this
-   artifact could be found [here](TODO).
+   accommodate collaboration with others.
 5. Check that the development supports extraction of examples to
-   OCaml, which can actually be executed. TODO
+   OCaml, which can actually be executed. Specifically, run the
+   following commands in the project root directory.
+   - "cd ./extract; ./run.sh; cd .." extracts and runs examples
+     written in EMS (abstractions and implementation of Echo, etc)
+     using the extraction mechanism of Interaction Trees.
+   - "cd ./imp/compiler_extract; ./run.sh; cd .." builds IMP compiler,
+     compiles an example down to the assembly using CompCert, and runs
+     it.
 6. (optional) Check that the development is not using any more axioms
    than the ones specified in Section "Axioms". You can execute `Print
    Assumptions THEOREM` after a theorem. (e.g., try `Print Assumptions
    adequacy_type2` at the end of the `spc/Hoare.v`.)
    
-## EMS extraction example
-Running extracted examples (abstractions and implementation of MW, Echo, and etc.)
-- "cd ./extract; ./run.sh"
 
 ## IMP compilation example
 Building IMP compiler and compiling the example (IMP implementation of Echo)
-- "cd ./imp/compiler_extract; ./run.sh" (please refer to the script for detailed instructions) 
+-  (please refer to the script for detailed instructions) 
 
 ## Mapping from the paper to the Coq development
 Fig. 1
@@ -97,7 +136,14 @@ Fig. 6
 - Conds --> `(alist gname fspec)`
 - <S |-a M> --> `Module SMod` in HoareDef.v
 - WrapC --> `HoareCall` in HoardDef.v
-- WrapF --> `HoareFun` in HoardDef.v
+- WrapF --> `HoareFun` in HoardDef.v 
+
+Note: the gap between Coq development and paper's presentation of
+Fig. 6 originates from the additional features in Section 5, which are
+just briefly mentioned. Specifically, the ordinals comes from the
+extension on Section 5.1 and the additional arguments to pre/post
+conditions (`varg_src, vret_src`) comes from the extension on Section
+5.3.
 
 Fig. 7
 - 𝜎_Mem --> `SModSem.initial_mr` field of `SMemSem` in mem/Mem1.v
@@ -119,6 +165,11 @@ Theorem 4.1 (Assumption Cancellation Theorem (ACT))
 
 Theorem 4.2 (Extensionality)
 - `adequacy_weaken` in spc/Weakening.v
+
+Note: Indeed, we are proving stronger property than a mere
+extensionality here. `stb_weaker` in spc/STB.v allows not just
+extension of the specs, but also weakening/strengthening of the
+pre/post-conditions.
 
 Lemma 4.3 (Safety)
 - `safe_mods_safe` in spc/Safe.v
@@ -148,85 +199,6 @@ The development uses the following non-constructive axioms (most of them are in 
 - Bisimulation on itree implies Leibniz equality. (`bisimulation_is_eq` [here](https://github.com/DeepSpec/InteractionTrees/blob/master/theories/Eq/EqAxiom.v#L18))
 
 ## Chat Room
-You can come and chat with us in [CCR-project discord
-server](https://discord.gg/jQezqzJZ).
-
-
-
-
-
-
-
-## Delta with paper (and technical report)'s presentation
-
-
-## Mapping from the Technical Report to the Coq development
-
-Fig. 3
-- In examples/cannon directory.
-
-Fig. 4
-- mem/MemOpen.v
-
-Fig. 5
-- examples/stack directory. I_Stack maps to Stack0.v, Stack1 maps to Stack2.v
-
-Fig. 6
-- examples/stack directory. Stack2A/2B maps to Stack3A/B.v
-
-Fig. 7
-- examples/echo directory. Composed result is in EchoAll.v
-
-Fig. 8
-- examples/repeat directory.
-
-Fig. 9
-- Eprim --> `eventE` in ModSem.v
-- EEMS --> `Es` in ModSem.v
-- EMS --> `ModSem.t` in ModSem.v
-- EPAbs --> `hEs` in HoarDef.v
-- PAbs --> `KModSem.t` in OpenDef.v
-- PCM --> `URA.t` in PCM.v
-- rProp --> `iProp'` in IProp.v
-- Spec --> `fspec` in HoarDef.v
-- Specs --> `(alist gname fspec)`
-- s1 ⊒ s0 --> `fspec_weaker` in STB.v
-- S1 ⊒ s0 --> `stb_weaker` in STB.v
-- Mod --> `Mod.t` in ModSem.v
-- Trace --> `Tr.t` in Behavior.v
-- Beh --> composition of `Beh.of_program` in Behavior.v and `ModL.compile` in ModSem.v.
-- Mi ≤ctx Ma --> `refines2` in ModSem.v
-
-Fig. 9
-- `compile_itree` in ModSem.v
-- `interp_Es` in ModSemE.v
-
-Fig. 10
-- STS.v, Behavior.v
-
-Fig. 11
-- toAbs ([A]) --> `KModSem.transl_src` in OpenDef.v
-- toAbspec (S_in \rtimes A : S_out) --> `KModSem.transl_tgt` in OpenDef.v
-- others are in OpenDef.v/HoareDef.v
-
-Theorem 1
-- `adequacy_open` in Open.v
-
-Theorem 2
-- `adequacy_type` (`adequacy_type2`) in Hoare.v
-
-Theorem 3
-- `adequacy_weaken` in Weakening.v
-
-Theorem 4
-- safe --> `safe_itree` in Safe.v
-- `safe_mods_safe` in Safe.v
-
-Theorem 6
-- `adequacy_local2` in SimModSemHint.v
-
-Theorem 7
-- `beh_preserved` in STS2ITree.v
-
-Theorem 8
-- `compile_behavior_improves` in Imp2AsmProof.v
+If you are involved in this project in any way -- either the user or
+the developer -- you are encouraged to join the [CCR-project discord
+server](https://discord.gg/jQezqzJZ) for chat.
