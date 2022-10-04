@@ -10,10 +10,10 @@ compiles without any problem.
 ## Download, installation, and sanity-testing
 The artifact is presented as a Docker image ("CCR-docker.tar"), but we
 are also submitting the latest source code ("CCR.tar.gz") just in
-case. Both of these are also available
+case. Both of these are also publicly available
 [here](https://github.com/alxest/CCR) and
 [here](https://hub.docker.com/repository/docker/alxest/popl23ae).  If
-there is a need to update our artifact in the process of the review
+there is a need to update our artifact in the middle of the review
 process, we will make the latest version available on those links.
 
 ### Installing via Docker image
@@ -91,11 +91,6 @@ To evaluate this artifact, we propose the following steps:
    than the ones specified in Section "Axioms". You can execute `Print
    Assumptions THEOREM` after a theorem. (e.g., try `Print Assumptions
    adequacy_type2` at the end of the `spc/Hoare.v`.)
-   
-
-## IMP compilation example
-Building IMP compiler and compiling the example (IMP implementation of Echo)
--  (please refer to the script for detailed instructions) 
 
 ## Mapping from the paper to the Coq development
 Fig. 1
