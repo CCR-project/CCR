@@ -42,16 +42,89 @@ To evaluate this artifact, we propose the following steps:
    have also setup [public chat room](https://discord.gg/jQezqzJZ) to
    accommodate collaboration with others. The commit we used in this
    artifact could be found [here](TODO).
-5. (optional) Check that the development is not using any more axioms
+5. Check that the development supports extraction of examples to
+   OCaml, which can actually be executed. TODO
+6. (optional) Check that the development is not using any more axioms
    than the ones specified in Section "Axioms". You can execute `Print
    Assumptions THEOREM` after a theorem. (e.g., try `Print Assumptions
    adequacy_type2` at the end of the `spc/Hoare.v`.)
+   
+## EMS extraction example
+Running extracted examples (abstractions and implementation of MW, Echo, and etc.)
+- "cd ./extract; ./run.sh"
+
+## IMP compilation example
+Building IMP compiler and compiling the example (IMP implementation of Echo)
+- "cd ./imp/compiler_extract; ./run.sh" (please refer to the script for detailed instructions) 
 
 ## Mapping from the paper to the Coq development
-We will clarify at which point the paper's presentation is simplified on the fly.
+Fig. 1
+(in examples/map directory)
+- module I_Map --> MapI.v
+- module A_Map --> MapA.v
+- pre/post conditions S_Map --> `MapStb` in MapHeader.v
+- module M_Map (L200) --> MapM.v
 
+Sec. 2.4 Incremental and modular verification of the running example
+(in `examples/map` directory)
+- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> MapIAproof.v
+- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> MapMAproof.v
+- proof of end-to-end refinement (I_Map ⊑_ctx <S_Map ⊢ A_Map >) -> MapIAproof.v
 
-- In the paper, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
+Fig. 3
+(in ems/ directory)
+- E_P --> `eventE` in ModSem.v
+- E_EMS --> `Es` in ModSem.v
+- Mod --> `Mod.t` in ModSem.v
+- Mi ≤ctx Ma --> `refines2` in ModSem.v
+- Vertical composition of contextual refinements --> `refines2_PreOrder` in ModSem.v
+- Horizontal composition of contextual refinements --> `refines2_add` in ModSem.v
+
+Fig. 4
+(in ems/ directory)
+- Trace --> `Tr.t` in `Behavior.v`
+- beh --> `Beh.of_program` in `Behavior.v`
+- concat --> `ModL.compile` in `ModSem.v`
+
+Fig. 5
+- simulation relation --> `sim_itree` in SimModSem.v
+
+Fig. 6
+(in spc/ directory)
+- PCM --> `URA.t` in PCM.v
+- rProp --> `iProp'` in IProp.v
+- Cond --> `fspec` in HoarDef.v
+- Conds --> `(alist gname fspec)`
+- <S |-a M> --> `Module SMod` in HoareDef.v
+- WrapC --> `HoareCall` in HoardDef.v
+- WrapF --> `HoareFun` in HoardDef.v
+
+Fig. 7
+- 𝜎_Mem --> `SModSem.initial_mr` field of `SMemSem` in mem/Mem1.v
+- S_Mem --> `MemStb` in mem/Mem1.v
+
+Fig. 8
+(in examples/repeat directory)
+- repeat --> `repeatF` in Repeat0.v
+- succ, main --> `succF` and `addF` in Add0.v
+- H_RP --> `repeat_spec` in Repeat1.v
+- S_SC --> `succ_spec` in Add1.v
+- end-to-end refinement --> `correct` in RepeatAll.v
+
+Theorem 3.1 (Adequacy)
+- `adequacy_local2` in ems/SimModSem.v
+
+Theorem 4.1 (Assumption Cancellation Theorem (ACT))
+- `adequacy_type2` in spc/Hoare.v
+
+Theorem 4.2 (Extensionality)
+- `adequacy_weaken` in spc/Weakening.v
+
+Lemma 4.3 (Safety)
+- `safe_mods_safe` in spc/Safe.v
+
+Theorem 6.1 (Separate Compilation Correctness)
+- `compile_behavior_improves` in imp/compiler_proof/Imp2AsmProof.v
 
 ## Axioms
 The development uses the following non-constructive axioms (most of them are in `lib/Axioms.v`).
@@ -86,90 +159,28 @@ server](https://discord.gg/jQezqzJZ).
 
 ## Delta with paper (and technical report)'s presentation
 
-## EMS extraction example
-Running extracted examples (abstractions and implementation of MW, Echo, and etc.)
-- "cd ./extract; ./run.sh"
 
-## IMP compilation example
-Building IMP compiler and compiling the example (IMP implementation of Echo)
-- "cd ./imp/compiler_extract; ./run.sh" (please refer to the script for detailed instructions)
-
-## Paper to code mapping
-
-Fig. 1
-(examples/map)
-- module I_Map --> MapI.v
-- module A_Map --> MapA.v
-- pre/post conditions S_Map --> `MapStb` in MapHeader.v
-- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
-- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
- 
-Sec. 2.4 Incremental and modular verification of the running example
-(examples/map)
-- proof of I_Map ⊑_ctx <S0_Map ⊢ M_Map > -> `MapIAproof.v`
-- proof of <S0_Map ⊢ M_Map > ⊑_ctx <S_Map ⊢ A_Map > -> `MapMAproof.v` 
+## Mapping from the Technical Report to the Coq development
 
 Fig. 3
-(ems/)
-- E_P --> `eventE` in ModSem.v
-- E_EMS --> `Es` in ModSem.v
-- Mod --> `Mod.t` in ModSem.v
-- Mi ≤ctx Ma --> `refines2` in ModSem.v
-
-Fig. 4
-(ems/)
-- Trace --> `Tr.t` in Behavior.v
-- Beh --> composition of `Beh.of_program` in Behavior.v and `ModL.compile` in ModSem.v.
-
-Fig. 6
-(spc/)
-- PCM --> `URA.t` in PCM.v
-- rProp --> `iProp'` in IProp.v
-- Cond --> `fspec` in HoarDef.v
-- Conds --> `(alist gname fspec)`
-- <S |-a M> --> `Module SMod` in HoareDef.v
-- WrapC --> `HoareCall` in HoardDef.v
-- WrapF --> `HoareFun` in HoardDef.v
-
-Fig. 7
-- mem/Mem1.v
-
-Theorem 3.1 (Adequaccy)
-- `adequacy_local2` in ems/SimModSem.v
-
-Theorem 4.1 (Assumption Cancellation Theorem (ACT))
-- `adequacy_type2` in spc/Hoare.v
-
-Theorem 4.2 (Extensionality)
-- `adequacy_weaken` in spc/Weakening.v
-
-Lemma 4.3 (Safety)
-- `safe_mods_safe` in spc/Safe.v
-
-Theorem 6.1 (Separate Compilation Correctness)
-- `compile_behavior_improves` in imp/compiler_proof/Imp2AsmProof.v
-
-## Technical Report to code mapping
-
-Fig. 2
 - In examples/cannon directory.
 
-Fig. 3
+Fig. 4
 - mem/MemOpen.v
 
-Fig. 4
+Fig. 5
 - examples/stack directory. I_Stack maps to Stack0.v, Stack1 maps to Stack2.v
 
-Fig. 5
+Fig. 6
 - examples/stack directory. Stack2A/2B maps to Stack3A/B.v
 
-Fig. 6
+Fig. 7
 - examples/echo directory. Composed result is in EchoAll.v
 
-Fig. 7
+Fig. 8
 - examples/repeat directory.
 
-Fig. 8
+Fig. 9
 - Eprim --> `eventE` in ModSem.v
 - EEMS --> `Es` in ModSem.v
 - EMS --> `ModSem.t` in ModSem.v
@@ -219,4 +230,3 @@ Theorem 7
 
 Theorem 8
 - `compile_behavior_improves` in Imp2AsmProof.v
-- 

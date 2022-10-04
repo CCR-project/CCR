@@ -15,7 +15,7 @@ open ModSemE
 open MutFG
 open Example0
 open EchoAll
-open MWAll
+(* open MWAll *)
 open Imp
 
 let cl2s = fun cl -> String.concat "" (List.map (String.make 1) cl)
@@ -95,10 +95,10 @@ let rec run t =
   | VisF (e, k) -> handle_Event e (fun x -> run (k x))
 
 let main =
-  print_endline (if coq_EXTRACT_MW_IMPL_LINKING_CHECK then "MW Linking: OK" else "MW Linking: Fail");
+  (* print_endline (if coq_EXTRACT_MW_IMPL_LINKING_CHECK then "MW Linking: OK" else "MW Linking: Fail"); *)
   print_endline "Which program do you want to execute?";
-  print_endline "1: MW example on Imp level (it prints 0/42 infinitely)";
-  print_endline "2: MW example on Abstraction level (it prints 0/42 infinitely)";
+  (* print_endline "1: MW example on Imp level (it prints 0/42 infinitely)"; *)
+  (* print_endline "2: MW example on Abstraction level (it prints 0/42 infinitely)"; *)
   print_endline "3: Mutual Sum example (in the technical report) on Imp level";
   print_endline "4: Mutual Sum example (in the technical report) on Abstraction level";
   print_endline "5: Echo example (in the technical report) on Imp level";
@@ -106,8 +106,8 @@ let main =
   print_endline "7: Echo example (in the technical report) on Abstraction level";
   print_endline "<<NOTE: These programs are all deterministic, but you may see some \"choose\" which is from Mem.alloc. Put any natural number; it does not affect semantics>>";
   match int_of_string (read_line()) with
-  | 1 -> run (mw_impl_itr)
-  | 2 -> run (mw_abs_itr)
+  (* | 1 -> run (mw_impl_itr) *)
+  (* | 2 -> run (mw_abs_itr) *)
   | 3 -> run (mutsum_imp)
   | 4 -> run (mutsum)
   | 5 -> run (echo_imp_itr)
