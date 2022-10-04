@@ -3,101 +3,80 @@
 This is the artifact for the paper "Conditional Contextual Refinement".
 
 ## List of Claims
-The main claim of this artifact is that the description in the paper
-corresponds to the Coq development (modulo small simplifications for
-presentation purposes).
+We claim that the artifact provides Coq development for the results in
+the paper (modulo small simplifications for expository purposes) and
+compiles without any problem.
 
 ## Download, installation, and sanity-testing
-The artifact is presented as a docker image. The raw source code could
-be found [here](https://sf.snu.ac.kr/publications/ccr.tar.gz) and the
-docker image -- containing the source-code with all dependencies
-already installed -- could be found [here](TODO). We recommend using
-the virtual machine unless you are an experienced opam user.
+The artifact is presented as a Docker image, but we are also
+submitting the latest source code just in case. Both of these are also
+available [here](https://github.com/alxest/CCR) and [here](TODO).  If
+there is a need to update our artifact in the process of the review
+process, we will make the latest version available on those links.
 
-If there is a need
-to update our artifact in the process of the review process, we will
-make the latest version available on those links.  We are also
-submitting the latest source code and docker image, just in case.
-
-### Installing via docker image
+### Installing via Docker image
+To use Docker, please install [Docker](https://www.docker.com/)
+(version 20.10.14 is tested) and TODO.
 
 ### Installing manually
-
-
-## Overview of the source code
+TODO
 
 ## Evaluation Instructions
 To evaluate this artifact, we propose the following steps:
-1. Confirm that the Coq development compiles without problems.  To do
-   so, run `make clean` if you have previously built the Coq
-   development or are using the docker image.  Thereafter, run `make
-   -jN` where `N` is the number of cores you wish to use.
-2. Search for `admit` or `Admitted.` in the source code files. As you
-   will see, the development does not have any admits.
-3. Read the Section "Differences to the paper" to familiarize yourself
-   with the differences between the on-paper presentation and the Coq
-   development.
-4. Read through the Coq development and compare the Theorems and
-   Definitions with those from the paper. You can find a mapping from
-   paper to Coq below in the section "Mapping between the paper and
-   the Coq development". You can find the Coq files in the folder
-   `dimsum`.
-5. Check that the axioms used in the development are only the ones
-   listed under "Axioms" below. To do so, you can execute
-   `Print Assumptions compiler_correct.` after a theorem (here
-   `compiler_correct`).
-6. Check that the Gitlab https://gitlab.mpi-sws.org/iris/dimsum
-   hosting the project is publicly accessible, includes an issue
-   tracker, and the code has an open source license. The commit that
-   was used to generate the artifact can be found here:
-   https://gitlab.mpi-sws.org/iris/dimsum/-/tree/7d5f0d636030173748e4a9e331e0d03718b8c8a6
+1. Confirm that the Coq development compiles without any problem.  To
+   do so, type `git clean -xf .` in the project root directory if you
+   have previously built the Coq development or are using the Docker
+   image. Check that no `.vo` file remains (e.g., typing `find
+   . -iname "*.vo"` in the project root should print nothing). Then,
+   run `make -jN` where `N` is the number of cores you wish to use.
+2. Check that the source code does not contain any `admit` or
+   `Admitted.` (e.g., typing `grep -ri "admit" --include="*.v" .`  in
+   the project root should print nothing).
+3. Read the Section "Mapping from the paper to the Coq development"
+   and check that the Coq development indeed corresponds to the
+   paper's presentation
+4. Check that the project is hosted in the [public
+   repository](https://github.com/alxest/CCR) (including an issue
+   tracker) with [open source
+   license](https://github.com/alxest/CCR/blob/popl23ae/LICENSE). We
+   have also setup [public chat room](https://discord.gg/jQezqzJZ) to
+   accommodate collaboration with others. The commit we used in this
+   artifact could be found [here](TODO).
+5. (optional) Check that the development is not using any more axioms
+   than the ones specified in Section "Axioms". You can execute `Print
+   Assumptions THEOREM` after a theorem. (e.g., try `Print Assumptions
+   adequacy_type2` at the end of the `spc/Hoare.v`.)
 
-## Differences to the paper
+## Mapping from the paper to the Coq development
+We will clarify at which point the paper's presentation is simplified on the fly.
 
-## Mapping between the paper and the Coq development
+
+- In the paper, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
 
 ## Axioms
+The development uses the following non-constructive axioms (most of them are in `lib/Axioms.v`).
+- Functional form of the (non extensional) Axiom of Choice.
+  (technically, it appears as `relational_choice`
+  [here](https://coq.inria.fr/library/Coq.Logic.RelationalChoice.html)
+  and `dependent_unique_choice`
+  [here](https://coq.inria.fr/library/Coq.Logic.ClassicalUniqueChoice.html).
+  However, combination of these two axioms are known to be equivalent
+  to Functional form of the (non extensional) Axiom of Choice.
+  Specifically, see `Reification of dependent and non dependent
+  functional relation are equivalent`, and `AC_rel + AC! = AC_fun`
+  [here](https://coq.inria.fr/library/Coq.Logic.ChoiceFacts.html).)
+- System call semantics, following the style of [CompCert](https://github.com/AbsInt/CompCert/blob/master/common/Events.v#L1483)
+- Propositional Extensionality. (`prop_extensinality` [here](https://coq.inria.fr/library/Coq.Logic.ClassicalFacts.html))
+- Proof Irrelevance. (`proof_irrelevance` [here](https://coq.inria.fr/library/Coq.Logic.ClassicalFacts.html))
+- Functional Extensionality. (`functional_extensionality_dep` [here](https://coq.inria.fr/library/Coq.Logic.FunctionalExtensionality.html))
+- Invariance by Substitution of Reflexive Equality Proofs, UIP. (`eq_rect_eq` [here](https://coq.inria.fr/library/Coq.Logic.Eqdep.html))
+- Constructive form of definite description. `constructive_definite_description` [here](https://coq.inria.fr/library/Coq.Logic.Description.html)
+- Excluded middle. (`classic` [here](https://coq.inria.fr/library/Coq.Logic.Classical_Prop.html))
+- Bisimulation on itree implies Leibniz equality. (`bisimulation_is_eq` [here](https://github.com/DeepSpec/InteractionTrees/blob/master/theories/Eq/EqAxiom.v#L18))
 
-
-
-MapIAproof
-Print Assumptions correct.
-
-Axioms:
-STS.syscall_sem : STS.event → Prop
-RelationalChoice.relational_choice
-  : ∀ (A B : Type) (R : A → B → Prop),
-      (∀ x : A, ∃ y : B, R x y)
-      → ∃ R' : A → B → Prop, Logic.subrelation R' R ∧ (∀ x : A, ∃ y, unique (λ y : B, R' x y) y)
-Axioms.prop_ext : ClassicalFacts.prop_extensionality
-proof_irrelevance : ∀ (P : Prop) (p1 p2 : P), p1 = p2
-functional_extensionality_dep : ∀ (A : Type) (B : A → Type) (f g : ∀ x : A, B x), (∀ x : A, f x = g x) → f = g
-Eqdep.Eq_rect_eq.eq_rect_eq : ∀ (U : Type) (p : U) (Q : U → Type) (x : Q p) (h : p = p), x = eq_rect p Q x p h
-ClassicalUniqueChoice.dependent_unique_choice
-  : ∀ (A : Type) (B : A → Type) (R : ∀ x : A, B x → Prop),
-      (∀ x : A, ∃ y, unique (λ y : B x, R x y) y) → ∃ f : ∀ x : A, B x, ∀ x : A, R x (f x)
-constructive_definite_description : ∀ (A : Type) (P : A → Prop), (∃ y, unique (λ x : A, P x) y) → {x : A | P x}
-classic : ∀ P : Prop, P ∨ ¬ P
-bisimulation_is_eq : ∀ (E : Type → Type) (R : Type) (t1 t2 : itree E R), t1 ≅ t2 → t1 = t2
-
-
-Axioms:
-syscall_sem : event → Prop
-relational_choice
-  : ∀ (A B : Type) (R : A → B → Prop),
-      (∀ x : A, ∃ y : B, R x y)
-      → ∃ R' : A → B → Prop, Logic.subrelation R' R ∧ (∀ x : A, ∃ y, unique (λ y : B, R' x y) y)
-Axioms.prop_ext : ClassicalFacts.prop_extensionality
-ProofIrrelevance.proof_irrelevance : ∀ (P : Prop) (p1 p2 : P), p1 = p2
-functional_extensionality_dep : ∀ (A : Type) (B : A → Type) (f g : ∀ x : A, B x), (∀ x : A, f x = g x) → f = g
-Eqdep.Eq_rect_eq.eq_rect_eq : ∀ (U : Type) (p : U) (Q : U → Type) (x : Q p) (h : p = p), x = eq_rect p Q x p h
-dependent_unique_choice
-  : ∀ (A : Type) (B : A → Type) (R : ∀ x : A, B x → Prop),
-      (∀ x : A, ∃ y, unique (λ y : B x, R x y) y) → ∃ f : ∀ x : A, B x, ∀ x : A, R x (f x)
-constructive_definite_description : ∀ (A : Type) (P : A → Prop), (∃ y, unique (λ x : A, P x) y) → {x : A | P x}
-classic : ∀ P : Prop, P ∨ ¬ P
-bisimulation_is_eq : ∀ (E : Type → Type) (R : Type) (t1 t2 : itree E R), t1 ≅ t2 → t1 = t2
-
+## Chat Room
+You can come and chat with us in [CCR-project discord
+server](https://discord.gg/jQezqzJZ).
 
 
 
@@ -106,9 +85,6 @@ bisimulation_is_eq : ∀ (E : Type → Type) (R : Type) (t1 t2 : itree E R), t1 
 
 
 ## Delta with paper (and technical report)'s presentation
-
-- In the paper and technical report, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
-- In the technical report, we use explicit event GetCaller (using monadic style) but in development we just thread it.
 
 ## EMS extraction example
 Running extracted examples (abstractions and implementation of MW, Echo, and etc.)
