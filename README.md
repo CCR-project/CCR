@@ -79,8 +79,11 @@ To evaluate this artifact, we propose the following steps:
    have also setup [public chat room](https://discord.gg/jQezqzJZ) to
    accommodate collaboration with others.
 5. Check that the development supports extraction of examples to
-   OCaml, which can actually be executed. Specifically, run the
-   following commands in the project root directory.
+   OCaml, which can actually be executed. The script below runs "echo"
+   example (in the tech report) which takes (scanf) integers
+   indefinitely, and when you put `-1`, it will print the integers you
+   entered so far in a reverse order. You can run the scripts as
+   follows in the project root directory.
    - "cd ./extract; ./run.sh; cd .." extracts and runs examples
      written in EMS (abstractions and implementation of Echo, etc)
      using the extraction mechanism of Interaction Trees.
