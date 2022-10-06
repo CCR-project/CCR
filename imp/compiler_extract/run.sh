@@ -35,7 +35,7 @@ mv client.s bin/client.s
 gcc -m64 -no-pie -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
 
 echo "Run program: echo example (on the technical report)"
-read input
+#read input
 bin/echo_all
 # echo "(Echo) Input integers, -1 to stop:"
 # bin/MW_all
