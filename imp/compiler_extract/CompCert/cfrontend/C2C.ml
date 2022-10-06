@@ -253,88 +253,11 @@ let builtins_generic = {
         (TVoid [],
           [TPtr(TVoid [], [])],
           false);
-    "__compcert_va_int32",
-        (TInt(IUInt, []),
-          [TPtr(TVoid [], [])],
-          false);
-    "__compcert_va_int64",
-        (TInt(IULongLong, []),
-          [TPtr(TVoid [], [])],
-          false);
-    "__compcert_va_float64",
-        (TFloat(FDouble, []),
-          [TPtr(TVoid [], [])],
-          false);
-    "__compcert_va_composite",
-        (TPtr(TVoid [], []),
-          [TPtr(TVoid [], []); TInt(IULong, [])],
-          false);
   (* Optimization hints *)
     "__builtin_unreachable",
         (TVoid [], [], false);
     "__builtin_expect",
-        (TInt(ILong, []), [TInt(ILong, []); TInt(ILong, [])], false);
-  (* Helper functions for int64 arithmetic *)
-    "__compcert_i64_dtos",
-        (TInt(ILongLong, []),
-         [TFloat(FDouble, [])],
-         false);
-    "__compcert_i64_dtou",
-        (TInt(IULongLong, []),
-         [TFloat(FDouble, [])],
-         false);
-    "__compcert_i64_stod",
-        (TFloat(FDouble, []),
-         [TInt(ILongLong, [])],
-         false);
-    "__compcert_i64_utod",
-        (TFloat(FDouble, []),
-         [TInt(IULongLong, [])],
-         false);
-    "__compcert_i64_stof",
-        (TFloat(FFloat, []),
-         [TInt(ILongLong, [])],
-         false);
-    "__compcert_i64_utof",
-        (TFloat(FFloat, []),
-         [TInt(IULongLong, [])],
-         false);
-    "__compcert_i64_sdiv",
-        (TInt(ILongLong, []),
-         [TInt(ILongLong, []); TInt(ILongLong, [])],
-         false);
-    "__compcert_i64_udiv",
-        (TInt(IULongLong, []),
-         [TInt(IULongLong, []); TInt(IULongLong, [])],
-         false);
-    "__compcert_i64_smod",
-        (TInt(ILongLong, []),
-         [TInt(ILongLong, []); TInt(ILongLong, [])],
-         false);
-    "__compcert_i64_umod",
-        (TInt(IULongLong, []),
-         [TInt(IULongLong, []); TInt(IULongLong, [])],
-         false);
-    "__compcert_i64_shl",
-        (TInt(ILongLong, []),
-         [TInt(ILongLong, []); TInt(IInt, [])],
-         false);
-    "__compcert_i64_shr",
-        (TInt(IULongLong, []),
-         [TInt(IULongLong, []); TInt(IInt, [])],
-         false);
-    "__compcert_i64_sar",
-        (TInt(ILongLong, []),
-         [TInt(ILongLong, []); TInt(IInt, [])],
-         false);
-    "__compcert_i64_smulh",
-        (TInt(ILongLong, []),
-         [TInt(ILongLong, []); TInt(ILongLong, [])],
-         false);
-    "__compcert_i64_umulh",
-        (TInt(IULongLong, []),
-         [TInt(IULongLong, []); TInt(IULongLong, [])],
-         false)
+        (TInt(ILong, []), [TInt(ILong, []); TInt(ILong, [])], false)
   ]
 }
 
@@ -597,22 +520,24 @@ let convertFkind k a : coq_type =
       if not !Clflags.option_flongdouble then unsupported "'long double' type";
       Tfloat (F64, a)
 
+let checkResultType env ty =
+  if (not !Clflags.option_fstruct_passing) && Cutil.is_composite_type env ty
+  then unsupported "function returning a struct or union \
+                    (consider adding option [-fstruct-passing])"
+
+let checkArgumentType env ty =
+  if (not !Clflags.option_fstruct_passing) && Cutil.is_composite_type env ty
+  then unsupported "function parameter of struct or union type \
+                    (consider adding option [-fstruct-passing])"
+
 let checkFunctionType env tres targs =
-  if not !Clflags.option_fstruct_passing then begin
-    if Cutil.is_composite_type env tres then
-      unsupported "function returning a struct or union (consider adding option [-fstruct-passing])";
-    begin match targs with
-    | None -> ()
-    | Some l ->
-        List.iter
-          (fun (id, ty) ->
-            if Cutil.is_composite_type env ty then
-              unsupported "function parameter of struct or union type (consider adding option [-fstruct-passing])")
-          l
-    end
+  checkResultType env tres;
+  begin match targs with
+  | None -> ()
+  | Some l -> List.iter (fun (id, ty) -> checkArgumentType env ty) l
   end
 
-let rec convertTyp env t =
+let rec convertTyp env ?bitwidth t =
   match t with
   | C.TVoid a -> Tvoid
   | C.TInt(ik, a) ->
@@ -643,7 +568,21 @@ let rec convertTyp env t =
   | C.TUnion(id, a) ->
       Tunion(intern_string id.name, convertAttr a)
   | C.TEnum(id, a) ->
-      convertIkind Cutil.enum_ikind (convertAttr a)
+      let ik =
+        match bitwidth with
+        | None -> Cutil.enum_ikind
+        | Some w ->
+            let info = Env.find_enum env id in
+            let representable sg =
+              List.for_all (fun (_, v, _) -> Cutil.int_representable v w sg)
+                           info.Env.ei_members in
+            if representable false then
+              Cutil.unsigned_ikind_of Cutil.enum_ikind
+            else if representable true then
+              Cutil.signed_ikind_of Cutil.enum_ikind
+            else
+              Cutil.enum_ikind in
+      convertIkind ik (convertAttr a)
 
 and convertParams env = function
     | [] -> Tnil
@@ -679,9 +618,16 @@ let rec convertTypAnnotArgs env = function
             convertTypAnnotArgs env el)
 
 let convertField env f =
-  if f.fld_bitfield <> None then
-    unsupported "bit field in struct or union (consider adding option [-fbitfields])";
-  (intern_string f.fld_name, convertTyp env f.fld_typ)
+  let id = intern_string f.fld_name
+  and ty = convertTyp env ?bitwidth: f.fld_bitfield f.fld_typ in
+  match f.fld_bitfield with
+  | None -> Member_plain(id, ty)
+  | Some w ->
+      match ty with
+      | Tint(sz, sg, attr) ->
+          Member_bitfield(id, sz, sg, attr, Z.of_uint w, f.fld_name = "")
+      | _ ->
+          fatal_error "bitfield must have type int"
 
 let convertCompositedef env su id attr members =
   if Cutil.find_custom_attributes ["packed";"__packed__"] attr <> [] then
@@ -784,6 +730,11 @@ let convertFloat f kind =
 
 (** Expressions *)
 
+let check_volatile_bitfield env e =
+  if Cutil.is_bitfield env e
+  && List.mem AVolatile (Cutil.attributes_of_type env e.etyp) then
+    warning Diagnostics.Unnamed "access to a volatile bit field, the 'volatile' qualifier is ignored"
+
 let ezero = Eval(Vint(coqint_of_camlint 0l), type_int32s)
 
 let ewrap = function
@@ -798,6 +749,7 @@ let rec convertExpr env e =
   | C.EUnop((C.Oderef|C.Odot _|C.Oarrow _), _)
   | C.EBinop(C.Oindex, _, _, _) ->
       let l = convertLvalue env e in
+      check_volatile_bitfield env e;
       ewrap (Ctyping.evalof l)
 
   | C.EConst(C.CInt(i, k, _)) ->
@@ -867,6 +819,7 @@ let rec convertExpr env e =
       if Cutil.is_composite_type env e2.etyp
       && List.mem AVolatile (Cutil.attributes_of_type env e2.etyp) then
         warning Diagnostics.Unnamed "assignment of a value of volatile composite type, the 'volatile' qualifier is ignored";
+      check_volatile_bitfield env e1;
       ewrap (Ctyping.eassign e1' e2')
   | C.EBinop((C.Oadd_assign|C.Osub_assign|C.Omul_assign|C.Odiv_assign|
               C.Omod_assign|C.Oand_assign|C.Oor_assign|C.Oxor_assign|
@@ -887,6 +840,7 @@ let rec convertExpr env e =
         | _ -> assert false in
       let e1' = convertLvalue env e1 in
       let e2' = convertExpr env e2 in
+      check_volatile_bitfield env e1;
       ewrap (Ctyping.eassignop op' e1' e2')
   | C.EBinop(C.Ocomma, e1, e2, _) ->
       ewrap (Ctyping.ecomma (convertExpr env e1) (convertExpr env e2))
@@ -1013,12 +967,13 @@ let rec convertExpr env e =
       | None ->
           error "wrong type for function part of a call"
       | Some(tres, targs, va) ->
-          checkFunctionType env tres targs;
           if targs = None && not !Clflags.option_funprototyped then
             unsupported "call to unprototyped function (consider adding option [-funprototyped])";
           if va && not !Clflags.option_fvararg_calls then
             unsupported "call to variable-argument function (consider adding option [-fvararg-calls])"
       end;
+      checkResultType env e.etyp;
+      List.iter (fun arg -> checkArgumentType env arg.etyp) args;
       ewrap (Ctyping.ecall (convertExpr env fn) (convertExprList env args))
 
 and convertLvalue env e =
@@ -1280,7 +1235,6 @@ let convertFundef loc env fd =
 (** External function declaration *)
 
 let re_builtin = Str.regexp "__builtin_"
-let re_runtime = Str.regexp "__compcert_i64_"
 
 let convertFundecl env (sto, id, ty, optinit) =
   let (args, res, cconv) =
@@ -1293,7 +1247,6 @@ let convertFundecl env (sto, id, ty, optinit) =
   let ef =
     if id.name = "malloc" then AST.EF_malloc else
     if id.name = "free" then AST.EF_free else
-    if Str.string_match re_runtime id.name 0 then  AST.EF_runtime(id'', sg) else
     if Str.string_match re_builtin id.name 0
     && List.mem_assoc id.name builtins.builtin_functions
     then AST.EF_builtin(id'', sg)
@@ -1415,6 +1368,81 @@ let rec convertCompositedefs env res gl =
       | _ ->
           convertCompositedefs env res gl'
 
+(** Add declarations for the helper functions
+    (for varargs and for int64 arithmetic) *)
+
+let helper_functions () = [
+    "__compcert_va_int32",
+        Tint(I32, Unsigned, noattr),
+        [Tpointer(Tvoid, noattr)];
+    "__compcert_va_int64",
+        Tlong(Unsigned, noattr),
+        [Tpointer(Tvoid, noattr)];
+    "__compcert_va_float64",
+        Tfloat(F64, noattr),
+        [Tpointer(Tvoid, noattr)];
+    "__compcert_va_composite",
+        Tpointer(Tvoid, noattr),
+        [Tpointer(Tvoid, noattr); convertIkind (Cutil.size_t_ikind()) noattr];
+    "__compcert_i64_dtos",
+        Tlong(Signed, noattr),
+        [Tfloat(F64, noattr)];
+    "__compcert_i64_dtou",
+        Tlong(Unsigned, noattr),
+        [Tfloat(F64, noattr)];
+    "__compcert_i64_stod",
+        Tfloat(F64, noattr),
+        [Tlong(Signed, noattr)];
+    "__compcert_i64_utod",
+        Tfloat(F64, noattr),
+        [Tlong(Unsigned, noattr)];
+    "__compcert_i64_stof",
+        Tfloat(F32, noattr),
+        [Tlong(Signed, noattr)];
+    "__compcert_i64_utof",
+        Tfloat(F32, noattr),
+        [Tlong(Unsigned, noattr)];
+    "__compcert_i64_sdiv",
+        Tlong(Signed, noattr),
+        [Tlong(Signed, noattr); Tlong(Signed, noattr)];
+    "__compcert_i64_udiv",
+        Tlong(Unsigned, noattr),
+        [Tlong(Unsigned, noattr); Tlong(Unsigned, noattr)];
+    "__compcert_i64_smod",
+        Tlong(Signed, noattr),
+        [Tlong(Signed, noattr); Tlong(Signed, noattr)];
+    "__compcert_i64_umod",
+        Tlong(Unsigned, noattr),
+        [Tlong(Unsigned, noattr); Tlong(Unsigned, noattr)];
+    "__compcert_i64_shl",
+        Tlong(Signed, noattr),
+        [Tlong(Signed, noattr); Tint(I32, Signed, noattr)];
+    "__compcert_i64_shr",
+        Tlong(Unsigned, noattr),
+        [Tlong(Unsigned, noattr); Tint(I32, Signed, noattr)];
+    "__compcert_i64_sar",
+        Tlong(Signed, noattr),
+        [Tlong(Signed, noattr); Tint(I32, Signed, noattr)];
+    "__compcert_i64_smulh",
+        Tlong(Signed, noattr),
+        [Tlong(Signed, noattr); Tlong(Signed, noattr)];
+    "__compcert_i64_umulh",
+        Tlong(Unsigned, noattr),
+        [Tlong(Unsigned, noattr); Tlong(Unsigned, noattr)]
+]
+
+let helper_function_declaration (name, tyres, tyargs) =
+  let tyargs =
+    List.fold_right (fun t tl -> Tcons(t, tl)) tyargs Tnil in
+  let ef =
+    AST.EF_runtime(coqstring_of_camlstring name,
+                   signature_of_type tyargs tyres AST.cc_default) in
+  (intern_string name,
+   AST.Gfun (Ctypes.External(ef, tyargs, tyres, AST.cc_default)))
+
+let add_helper_functions globs =
+  List.map helper_function_declaration (helper_functions()) @ globs
+
 (** Build environment of typedefs, structs, unions and enums *)
 
 let rec translEnv env = function
@@ -1512,10 +1540,11 @@ let convertProgram p =
         comp_env := ce;
         let gl1 = convertGlobdecls env [] p in
         let gl2 = globals_for_strings gl1 in
+        let gl3 = add_helper_functions gl2 in
         comp_env := Maps.PTree.empty;
         let p' =
-          { prog_defs = gl2;
-            prog_public = public_globals gl2;
+          { prog_defs = gl3;
+            prog_public = public_globals gl3;
             prog_main = intern_string !Clflags.main_function_name;
             prog_types = typs;
             prog_comp_env = ce } in

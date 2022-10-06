@@ -125,14 +125,15 @@ let rec mmap f env = function
       let (tl', env2) = mmap f env1 tl in
       (hd' :: tl', env2)
 
-let rec mmap2 f env l1 l2 =
+let rec mmap2_filter f env l1 l2 =
   match l1,l2 with
-  | [],[] -> [],env
-  | a1::l1,a2::l2 ->
-    let hd,env1 = f env a1 a2 in
-    let tl,env2 = mmap2 f env1 l1 l2 in
-    (hd::tl,env2)
-  | _, _ -> invalid_arg "mmap2"
+  | [], [] -> ([], env)
+  | a1 :: l1, a2 :: l2 ->
+      let (opt_hd, env1) = f env a1 a2 in
+      let (tl, env2) = mmap2_filter f env1 l1 l2 in
+      ((match opt_hd with Some hd -> hd :: tl | None -> tl), env2)
+  | _, _ ->
+      invalid_arg "mmap2_filter"
 
 (* To detect redefinitions within the same scope *)
 
@@ -395,34 +396,29 @@ let elab_float_constant f =
   (v, ty)
 
 let elab_char_constant loc wide chars =
+  let len = List.length chars in
   let nbits = if wide then 8 * !config.sizeof_wchar else 8 in
-  (* Treat multi-char constants as a number in base 2^nbits *)
   let max_digit = Int64.shift_left 1L nbits in
-  let max_val = Int64.shift_left 1L (64 - nbits) in
-  let v,_ =
-    List.fold_left
-      (fun (acc,err) d ->
-        if not err then begin
-          let overflow = acc < 0L || acc >= max_val
-          and out_of_range = d < 0L || d >= max_digit in
-          if overflow then
-            error loc "character constant too long for its type";
-          if out_of_range then
+  (* Treat multi-character constants as a number in base 2^nbits.
+     It must fit in type int for a normal constant and in type wchar_t
+     for a wide constant. *)
+  let v =
+    if len > (if wide then 1 else !config.sizeof_int) then begin
+      error loc "%d-character constant too long for its type" len;
+      0L
+    end else
+      List.fold_left
+        (fun acc d ->
+          if d < 0L || d >= max_digit then
             error loc "escape sequence is out of range (code 0x%LX)" d;
-          Int64.add (Int64.shift_left acc nbits) d,overflow || out_of_range
-        end else
-          Int64.add (Int64.shift_left acc nbits) d,true
-      )
-      (0L,false) chars in
-  if not (integer_representable v IInt) then
-    warning loc Unnamed "character constant too long for its type";
-  (* C99 6.4.4.4 item 10: single character -> represent at type char
-     or wchar_t *)
+          Int64.add (Int64.shift_left acc nbits) d)
+        0L chars in
+  (* C99 6.4.4.4 items 10 and 11:
+       single-character constant -> represent at type char
+       multi-character constant -> represent at type int
+       wide character constant -> represent at type wchar_t *)
   Ceval.normalize_int v
-    (if List.length chars = 1 then
-       if wide then wchar_ikind() else IChar
-     else
-       IInt)
+    (if wide then wchar_ikind() else if len = 1 then IChar else IInt)
 
 let elab_string_literal loc wide chars =
   let nbits = if wide then 8 * !config.sizeof_wchar else 8 in
@@ -627,6 +623,36 @@ let get_nontype_attrs env ty =
     | _ -> true in
   let nta = List.filter to_be_removed (attributes_of_type_no_expand ty) in
   (remove_attributes_type env nta ty, nta)
+
+(* Auxiliary for elaborating bitfield declarations. *)
+
+let check_bitfield loc env id ty ik n =
+  let max = Int64.of_int(sizeof_ikind ik * 8) in
+  if n < 0L then begin
+    error loc "bit-field '%a' has negative width (%Ld)" pp_field id n;
+    None
+  end else if n >  max then begin
+    error loc "size of bit-field '%a' (%Ld bits) exceeds its type (%Ld bits)" pp_field id n max;
+    None
+  end else if n = 0L && id <> "" then begin
+    error loc "named bit-field '%a' has zero width" pp_field id;
+    None
+  end else begin
+    begin match unroll env ty with
+    | TEnum(eid, _) ->
+      let info = wrap Env.find_enum loc env eid in
+      let w = Int64.to_int n in
+      let representable sg =
+        List.for_all (fun (_, v, _) -> Cutil.int_representable v w sg)
+                     info.Env.ei_members in
+      if not (representable false || representable true) then
+        warning loc Unnamed
+          "not all values of type 'enum %s' can be represented in bit-field '%a' (%d bits are not enough)"
+          eid.C.name pp_field id w
+    | _ -> ()
+    end;
+    Some (Int64.to_int n)
+  end
 
 (* Elaboration of a type specifier.  Returns 6-tuple:
      (storage class, "inline" flag, "noreturn" flag, "typedef" flag,
@@ -1010,23 +1036,11 @@ and elab_field_group env = function
             error loc "alignment specified for bit-field '%a'" pp_field id;
             None, env
           end else begin
-            let expr,env' =(!elab_expr_f loc env sz) in
+            let expr,env' = !elab_expr_f loc env sz in
             match Ceval.integer_expr env' expr with
             | Some n ->
-                if n < 0L then begin
-                  error loc "bit-field '%a' has negative width (%Ld)" pp_field id n;
-                  None,env
-                end else
-                  let max = Int64.of_int(sizeof_ikind ik * 8) in
-                  if n >  max then begin
-                    error loc "size of bit-field '%a' (%Ld bits) exceeds its type (%Ld bits)" pp_field id n max;
-                    None,env
-                end else
-                if n = 0L && id <> "" then begin
-                  error loc "named bit-field '%a' has zero width" pp_field id;
-                  None,env
-                end else
-                  Some(Int64.to_int n),env'
+                let bf = check_bitfield loc env' id ty ik n in
+                bf,env'
             | None ->
                 error loc "bit-field '%a' width not an integer constant" pp_field id;
                 None,env
@@ -1034,11 +1048,15 @@ and elab_field_group env = function
     if is_qualified_array ty then
       error loc "type qualifier used in array declarator outside of function prototype";
     let anon_composite = is_anonymous_composite ty in
-    if id = "" && not anon_composite && optbitsize = None  then
+    if id = "" && not anon_composite && optbitsize = None  then begin
       warning loc Missing_declarations "declaration does not declare anything";
-    { fld_name = id; fld_typ = ty; fld_bitfield = optbitsize'; fld_anonymous = id = "" && anon_composite},env'
+      None, env'
+    end else
+      Some { fld_name = id; fld_typ = ty; fld_bitfield = optbitsize';
+             fld_anonymous = id = "" && anon_composite},
+      env'
   in
-  (mmap2 elab_bitfield env' fieldlist names)
+  (mmap2_filter elab_bitfield env' fieldlist names)
 
 | Field_group_static_assert(exp, loc_exp, msg, loc_msg, loc) ->
     elab_static_assert env exp loc_exp msg loc_msg loc;
@@ -1397,14 +1415,18 @@ module I = struct
     | TStruct(id, _), Init_struct(id', (fld1, i1) :: flds) ->
         OK(Zstruct(z, id, [], fld1, flds), i1)
     | TUnion(id, _), Init_union(id', fld, i) ->
-        begin match (Env.find_union env id).Env.ci_members with
+      let rec first_named = function
         | [] -> NotFound
-        | fld1 :: _ ->
+        | fld1 :: fl ->
+          if fld1.fld_name = "" then
+            first_named fl
+          else begin
             OK(Zunion(z, id, fld1),
                if fld.fld_name = fld1.fld_name
                then i
                else default_init env fld1.fld_typ)
-        end
+          end in
+      first_named (Env.find_union env id).Env.ci_members
     | (TStruct _ | TUnion _), Init_single a ->
         (* This is a previous whole-struct initialization that we
            are going to overwrite.  Hard to support correctly
@@ -1742,6 +1764,32 @@ let elab_expr ctx loc env a =
   | CONSTANT cst ->
       let cst' = elab_constant loc cst in
       { edesc = EConst cst'; etyp = type_of_constant cst' },env
+
+(* 6.5.1.1 Generic selection *)
+
+  | GENERIC(a1, assoc) ->
+      let b1,env = elab env a1 in
+      let bssoc,env = elab_generic_association env assoc in
+      let ty = erase_attributes_type env (pointer_decay env b1.etyp) in
+      let exact_match = function
+        | (None, _) -> false
+        | (Some ty', _) -> compatible_types AttrCompat env ty ty'
+      and default_match = function
+        | (None, _) -> true
+        | (Some _, _) -> false in
+      begin match List.filter exact_match bssoc with
+      | (_, b) :: others ->
+          if others <> [] then
+            error "'_Generic' selector of type %a is compatible with several associations"
+                  (print_typ env) ty;
+          (b,env)
+      | [] ->
+          match List.find_opt default_match bssoc with
+          | Some (_, b) -> (b,env)
+          | None ->
+              fatal_error "'_Generic' selector of type %a is not compatible with any association"
+                          (print_typ env) ty
+      end
 
 (* 6.5.2 Postfix expressions *)
 
@@ -2427,6 +2475,36 @@ let elab_expr ctx loc env a =
         end;
         let rest,env = elab_arguments (argno + 1) (argl,env) paraml vararg in
         arg1 :: rest,env
+
+  (* Elaboration of _Generic association lists *)
+  and elab_generic_association env assoc =
+    let rec elab_gen env accu = function
+      | [] -> (List.rev accu, env)
+      | (None, a) :: l ->
+          if List.exists (fun (oty, _) -> oty = None) accu then
+            error "duplicate default generic association";
+          let b,env = elab env a in
+          elab_gen env ((None, b) :: accu) l
+      | (Some(spec, dcl), a) :: l ->
+          let ty,env = elab_type loc env spec dcl in
+          if wrap is_function_type loc env ty then
+            error "function type %a in generic association"
+              (print_typ env) ty
+          else if wrap incomplete_type loc env ty then
+            error "incomplete type %a in generic association"
+              (print_typ env) ty;
+          List.iter
+            (function
+            | (None, _) -> ()
+            | (Some ty', _) ->
+                if compatible_types AttrCompat env ty ty' then
+                  error "type %a in generic association compatible with previously specified type %a"
+                    (print_typ env) ty (print_typ env) ty')
+            accu;
+          let b,env = elab env a in
+          elab_gen env ((Some ty, b) :: accu) l
+    in elab_gen env [] assoc
+
   in elab env a
 
 (* Filling in forward declaration *)
@@ -2689,30 +2767,35 @@ let elab_fundef genv spec name defs body loc =
         the structs and unions defined in the parameter list. *)
   let (ty, extra_decls, lenv) =
     match ty, kr_params with
-    | TFun(ty_ret, None, vararg, attr), None ->
-        (TFun(ty_ret, Some [], vararg, attr), [], lenv)
-    | ty, None ->
+    | TFun(ty_ret, Some proto, vararg, attr), None ->
+        (ty, [], lenv)
+    | TFun(ty_ret, None, false, attr), None ->
+        let ty = TFun(ty_ret, Some [], inherit_vararg genv s sto ty, attr) in
+        warning loc CompCert_conformance "function definition without a prototype, converting to prototype form.@ New type is '%a'"
+          Cprint.simple_decl (fun_id, ty);
         (ty, [], lenv)
     | TFun(ty_ret, None, false, attr), Some params ->
-        warning loc CompCert_conformance "non-prototype, pre-standard function definition, converting to prototype form";
         let (params', extra_decls, lenv) =
           elab_KR_function_parameters lenv params defs loc in
-        (TFun(ty_ret, Some params', inherit_vararg genv s sto ty, attr), extra_decls, lenv)
-    | _, Some params ->
-        assert false
+        let ty =
+          TFun(ty_ret, Some params', inherit_vararg genv s sto ty, attr) in
+        warning loc CompCert_conformance "function definition without a prototype, converting to prototype form.@ New type is '%a'"
+          Cprint.simple_decl (fun_id, ty);
+        (ty, extra_decls, lenv)
+    | _, _ ->
+        fatal_error loc "wrong type for function definition"
   in
-  (* Extract infos from the type of the function.
-     Checks on the return type must be done in the global environment. *)
+  (* Extract infos from the type of the function. *)
   let (ty_ret, params, vararg, attr) =
     match ty with
-    | TFun(ty_ret, Some params, vararg, attr) ->
-         if has_std_alignas genv ty then
-           error loc "alignment specified for function '%s'" s;
-         if wrap incomplete_type loc genv ty_ret && not (is_void_type genv ty_ret) then
-           fatal_error loc "incomplete result type %a in function definition"
-             (print_typ genv) ty_ret;
-        (ty_ret, params, vararg, attr)
-    | _ -> fatal_error loc "wrong type for function definition" in
+    | TFun(ty_ret, Some params, vararg, attr) -> (ty_ret, params, vararg, attr)
+    | _ -> assert false in
+  (* Checks on the return type must be done in the global environment. *)
+  if has_std_alignas genv ty then
+    error loc "alignment specified for function '%s'" s;
+  if wrap incomplete_type loc genv ty_ret && not (is_void_type genv ty_ret) then
+    fatal_error loc "incomplete result type %a in function definition"
+                (print_typ genv) ty_ret;
   (* Enter function in the global environment *)
   let (fun_id, sto1, genv, new_ty, _) =
     enter_or_refine_function loc genv fun_id sto ty in
