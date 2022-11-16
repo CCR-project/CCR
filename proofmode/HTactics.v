@@ -674,8 +674,9 @@ Ltac _force_l :=
     let name := fresh "_GUARANTEE" in
     destruct (classic P) as [name|name]; [ired_both; apply sim_itreeC_spec; eapply sim_itreeC_choose_src; [exists name]|contradict name]; cycle 1; clear name
 
-  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; apply sim_itreeC_spec; econs; unseal i_tgt
+  | [ |- (gpaco8 (_sim_itree ?a0 ?a1) ?a2 ?a3 ?a4 ?a5 ?a6 ?a7 ?a8 ?a9 ?a10 (?a11, ?i_src) (?a12, ?i_tgt)) ] =>
+      change ((fun x => gpaco8 (_sim_itree a0 a1) a2 a3 a4 a5 a6 a7 a8 a9 a10 (a11, i_src) (a12, x)) i_tgt);
+      seal_last; apply sim_itreeC_spec; econs; unseal i_tgt
   end
 .
 
@@ -695,8 +696,9 @@ Ltac _force_r :=
     let name := fresh "_ASSUME" in
     destruct (classic P) as [name|name]; [ired_both; apply sim_itreeC_spec; eapply sim_itreeC_take_tgt; [exists name]|contradict name]; cycle 1
 
-  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; apply sim_itreeC_spec; econs; unseal i_src
+  | [ |- (gpaco8 (_sim_itree ?a0 ?a1) ?a2 ?a3 ?a4 ?a5 ?a6 ?a7 ?a8 ?a9 ?a10 (?a11, ?i_src) (?a12, ?i_tgt)) ] =>
+      change ((fun x => gpaco8 (_sim_itree a0 a1) a2 a3 a4 a5 a6 a7 a8 a9 a10 (a11, x) (a12, i_tgt)) i_src);
+      seal_last; apply sim_itreeC_spec; econs; unseal i_src
   end
 .
 

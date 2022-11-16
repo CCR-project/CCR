@@ -1459,6 +1459,15 @@ Ltac unseal x :=
   end
 .
 
+Ltac seal_last_with key :=
+  refine (@eq_ind _ _ _ _ _ (@Seal.sealing_eq key _ _)).
+
+Ltac seal_last :=
+  let key := fresh "key" in
+  assert (key:= "_deafult_");
+  seal_last_with key.
+
+
 Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
 Goal forall x, 5 + 5 = x. i. seal 5. seal x. Fail progress cbn. unseal key0. unseal 5. progress cbn. Abort.
 Goal forall x y z, x + y = z. i. seal x. seal y. unseal y. unseal key. Abort.
