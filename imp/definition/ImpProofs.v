@@ -878,6 +878,23 @@ Ltac imp_red :=
   match goal with
   (** denote_stmt *)
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (denote_stmt (?stmt)) _) _)) ] =>
+  match stmt with
+    | Skip => rewrite interp_imp_Skip
+    | Assign _ _ => rewrite interp_imp_Assign
+    | Seq _ _ => rewrite interp_imp_Seq; imp_red
+    | If _ _ _ => rewrite interp_imp_If
+    | CallFun _ _ _ => rewrite interp_imp_CallFun
+    | CallPtr _ _ _ => rewrite interp_imp_CallPtr
+    | CallSys _ _ _ => rewrite interp_imp_CallSys
+    | AddrOf _ _ => rewrite interp_imp_AddrOf
+    | Malloc _ _ => rewrite interp_imp_Malloc
+    | Free _ => rewrite interp_imp_Free
+    | Load _ _ => rewrite interp_imp_Load
+    | Store _ _ => rewrite interp_imp_Store
+    | Cmp _ _ _ => rewrite interp_imp_Cmp
+    | _ => fail
+    end
+  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (denote_stmt (?stmt)) _) _) _) ] =>
     match stmt with
     | Skip => rewrite interp_imp_Skip
     | Assign _ _ => rewrite interp_imp_Assign
@@ -909,11 +926,28 @@ Ltac imp_red :=
     | Lit_coerce _ => rewrite interp_imp_expr_Lit
     | _ => fail
     end
+  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (denote_expr (?expr)) _) _) _) ] =>
+    match expr with
+    | Var _ => rewrite interp_imp_expr_Var
+    | Lit _ => rewrite interp_imp_expr_Lit
+    | Eq _ _ => rewrite interp_imp_expr_Eq
+    | Lt _ _ => rewrite interp_imp_expr_Lt
+    | Plus _ _ => rewrite interp_imp_expr_Plus
+    | Minus _ _ => rewrite interp_imp_expr_Minus
+    | Mult _ _ => rewrite interp_imp_expr_Mult
+    | Var_coerce _ => rewrite interp_imp_expr_Var
+    | Lit_coerce _ => rewrite interp_imp_expr_Lit
+    | _ => fail
+    end
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (tau;; _) _) _)) ] =>
     rewrite interp_imp_tau
-
+  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (tau;; _) _) _) _) ] =>
+    rewrite interp_imp_tau
+  
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (Ret _) _) _)) ] =>
+    rewrite interp_imp_Ret
+  | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind (interp_imp _ (Ret _) _) _) _) ] =>
     rewrite interp_imp_Ret
 
   | _ => idtac
