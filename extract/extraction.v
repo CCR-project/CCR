@@ -19,7 +19,7 @@ Require Import MutFG Example0 EchoAll (* MWAll *) Imp ImpNotations.
 
 Cd "extract".
 
-Separate Extraction Z.to_nat Z.opp mutsum_imp mutsum ex0 echo_impl_itr echo_spec_itr echo_imp_itr
+Separate Extraction Z.to_nat Z.of_nat Z.opp mutsum_imp mutsum ex0 echo_impl_itr echo_spec_itr echo_imp_itr
          (* mw_impl_itr mw_abs_itr EXTRACT_MW_IMPL_LINKING_CHECK *)
 .
          (* echo_prog *)
